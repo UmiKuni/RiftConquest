@@ -22,6 +22,13 @@ const battleCardLabel = (entry) => {
   return `${entry.card.champion} (${entry.card.strength})`;
 };
 
+const abilityTooltipForEntry = (entry) => {
+  if (entry.facedown) {
+    return "Facedown card: no ability (hidden)";
+  }
+  return entry.card.ability || "No ability";
+};
+
 export default function GameBoard(props) {
   const { G, ctx, playerID, moves, isActive } = props;
   const myHand = G.hands[playerID] ?? [];
@@ -32,9 +39,10 @@ export default function GameBoard(props) {
   const oppId = myId === "0" ? "1" : "0";
   const gameover = ctx.gameover;
   const myAccepted = G.summaryAccepted?.[myId] ?? false;
+  const abilityLog = G.abilityLog ?? [];
 
   return (
-    <div className="relative mx-auto flex h-full w-full max-w-6xl flex-col gap-3 px-3 py-3">
+    <div className="relative mx-auto flex h-full w-full max-w-6xl flex-col gap-3 px-3 pt-3 pb-40">
       <div className="shrink-0 rounded-xl border border-slate-800 bg-slate-900 p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-slate-300">First to {WIN_VP} VP wins</p>
@@ -56,104 +64,211 @@ export default function GameBoard(props) {
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-3">
-        {orderedRegions.map((region) => {
-          const regionCards = G.board[region] ?? [];
-          const myRegionCards = regionCards.filter(
-            (entry) => entry.playerID === playerID,
-          );
-          const opponentRegionCards = [...regionCards]
-            .filter((entry) => entry.playerID !== playerID)
-            .reverse();
+      <div className="flex min-h-0 flex-1 gap-3">
+        {/* Left: guidelines + withdraw note */}
+        <div className="flex-[1_1_0] min-h-0 rounded-xl border border-slate-800 bg-slate-900 p-3 text-xs text-slate-200">
+          <h3 className="text-sm font-semibold text-sky-300">Guide</h3>
+          <ul className="mt-2 space-y-1">
+            <li>- Me = bottom, Opponent = top.</li>
+            <li>- Withdraw: lose this battle, opponent gains VP shown.</li>
+            <li>- Surrender: lose the entire game.</li>
+          </ul>
+          <p className="mt-3 text-xs text-amber-200">
+            Withdraw now: opponent gains {withdrawPoints} VP
+          </p>
+        </div>
 
-          return (
-            <div
-              key={region}
-              className="min-h-0 rounded-xl border border-slate-800 bg-slate-900 p-3"
-            >
-              <h2 className={`text-lg font-semibold ${colorForRegion(region)}`}>
-                {region}
-              </h2>
+        {/* Middle: regions board (3 columns) */}
+        <div className="flex-[3_3_0] min-h-0 rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <div className="grid h-full min-h-0 gap-3 md:grid-cols-3">
+            {orderedRegions.map((region) => {
+              const regionCards = G.board[region] ?? [];
+              const myRegionCards = regionCards.filter(
+                (entry) => entry.playerID === playerID,
+              );
+              const opponentRegionCards = [...regionCards]
+                .filter((entry) => entry.playerID !== playerID)
+                .reverse();
 
-              <div className="mt-2 flex h-[calc(100%-2rem)] min-h-0 flex-col rounded-lg border border-slate-800 bg-slate-950/60 p-2">
-                <div className="min-h-0 flex-1 overflow-hidden">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                    Opponent (Top)
-                  </p>
-                  {opponentRegionCards.length === 0 ? (
-                    <p className="mt-2 text-xs text-slate-600">No cards</p>
-                  ) : (
-                    <ul className="mt-2 overflow-hidden text-xs text-slate-200">
-                      {opponentRegionCards.map((entry, index) => (
-                        <li
-                          key={`${region}-op-${index}`}
-                          className={`relative rounded border border-slate-700 bg-slate-800 px-2 py-1 ${index === 0 ? "" : "-mt-3"}`}
-                          style={{ zIndex: 40 - index }}
-                        >
-                          <span className="text-slate-400">
-                            P{Number(entry.playerID) + 1}:{" "}
-                          </span>
-                          <span
-                            className={
-                              entry.facedown
-                                ? "text-slate-200"
-                                : colorForRegion(entry.card.region)
-                            }
-                          >
-                            {battleCardLabel(entry)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+              return (
+                <div
+                  key={region}
+                  className="min-h-0 rounded-xl border border-slate-800 bg-slate-900 p-3"
+                >
+                  <h2
+                    className={`text-lg font-semibold ${colorForRegion(region)}`}
+                  >
+                    {region}
+                  </h2>
+
+                  <div className="mt-2 flex h-[calc(100%-2rem)] min-h-0 flex-col rounded-lg border border-slate-800 bg-slate-950/60 p-2">
+                    <div className="min-h-0 flex-1 overflow-hidden">
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                        Opponent (Top)
+                      </p>
+                      {opponentRegionCards.length === 0 ? (
+                        <p className="mt-2 text-xs text-slate-600">No cards</p>
+                      ) : (
+                        <ul className="mt-2 overflow-hidden text-xs text-slate-200">
+                          {opponentRegionCards.map((entry, index) => (
+                            <li
+                              key={`${region}-op-${index}`}
+                              className={`relative rounded border border-slate-700 bg-slate-800 px-2 py-1 ${index === 0 ? "" : "-mt-3"}`}
+                              title={abilityTooltipForEntry(entry)}
+                              style={{ zIndex: 40 - index }}
+                            >
+                              <span className="text-slate-400">
+                                P{Number(entry.playerID) + 1}:{" "}
+                              </span>
+                              <span
+                                className={
+                                  entry.facedown
+                                    ? "text-slate-200"
+                                    : colorForRegion(entry.card.region)
+                                }
+                              >
+                                {battleCardLabel(entry)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="my-2 border-t border-slate-800" />
+
+                    <div className="min-h-0 flex-1 overflow-hidden">
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                        You (Bottom)
+                      </p>
+                      {myRegionCards.length === 0 ? (
+                        <p className="mt-2 text-xs text-slate-600">No cards</p>
+                      ) : (
+                        <ul className="mt-2 space-y-1 overflow-hidden text-xs text-slate-200">
+                          {myRegionCards.map((entry, index) => (
+                            <li
+                              key={`${region}-me-${index}`}
+                              className="rounded border border-slate-700 bg-slate-800 px-2 py-1"
+                              title={abilityTooltipForEntry(entry)}
+                            >
+                              <span className="text-slate-400">
+                                P{Number(entry.playerID) + 1}:{" "}
+                              </span>
+                              <span
+                                className={
+                                  entry.facedown
+                                    ? "text-slate-200"
+                                    : colorForRegion(entry.card.region)
+                                }
+                              >
+                                {battleCardLabel(entry)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
                 </div>
+              );
+            })}
+          </div>
+        </div>
 
-                <div className="my-2 border-t border-slate-800" />
+        {/* Right: ability log */}
+        <div className="flex-[1_1_0] min-h-0 rounded-xl border border-slate-800 bg-slate-900 p-3 text-xs text-slate-200">
+          <h3 className="text-sm font-semibold text-sky-300">Ability Log</h3>
+          {abilityLog.length === 0 ? (
+            <p className="mt-2 text-[11px] text-slate-500">
+              No abilities played yet this battle.
+            </p>
+          ) : (
+            <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto">
+              {[...abilityLog]
+                .slice()
+                .reverse()
+                .map((entry, index) => {
+                  const isMe = entry.playerID === myId;
+                  return (
+                    <li
+                      key={`${entry.index}-${index}`}
+                      className="text-[11px] leading-snug"
+                    >
+                      <span
+                        className={isMe ? "text-emerald-300" : "text-rose-300"}
+                      >
+                        {isMe ? "Me" : "Opponent"}
+                      </span>{" "}
+                      <span className="text-slate-300">
+                        played {entry.cardId} ({entry.type}) in {entry.region}
+                      </span>
+                    </li>
+                  );
+                })}
+            </ul>
+          )}
+        </div>
+      </div>
 
-                <div className="min-h-0 flex-1 overflow-hidden">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                    You (Bottom)
+      <div className="fixed inset-x-0 bottom-0 z-30 py-1">
+        <div className="relative mt-1 flex h-44 items-end justify-center">
+          {myHand.map((card, index) => (
+            <div
+              key={card.id}
+              className="group relative -ml-12 first:ml-0"
+              style={{ zIndex: index + 1 }}
+              title={card.ability || "No ability"}
+            >
+              <div className="flex aspect-[2/3] w-32 items-stretch rounded-xl border border-slate-700 bg-slate-950/95 p-2 text-xs text-slate-100 shadow-lg transition-transform duration-300 ease-out transform-gpu translate-y-2/3 group-hover:translate-y-1/3 sm:w-36 md:w-40">
+                <div className="flex w-full flex-col">
+                  <div className="flex items-baseline justify-between gap-1">
+                    <p className="text-[10px] text-slate-400">{card.id}</p>
+                    <p
+                      className={`text-xs font-semibold ${colorForRegion(card.region)}`}
+                    >
+                      {card.region}
+                    </p>
+                  </div>
+                  <p
+                    className={`mt-0.5 text-sm font-semibold ${colorForRegion(card.region)}`}
+                  >
+                    {card.champion}
                   </p>
-                  {myRegionCards.length === 0 ? (
-                    <p className="mt-2 text-xs text-slate-600">No cards</p>
-                  ) : (
-                    <ul className="mt-2 space-y-1 overflow-hidden text-xs text-slate-200">
-                      {myRegionCards.map((entry, index) => (
-                        <li
-                          key={`${region}-me-${index}`}
-                          className="rounded border border-slate-700 bg-slate-800 px-2 py-1"
+                  <p className={`text-[11px] ${colorForRegion(card.region)}`}>
+                    STR {card.strength}
+                  </p>
+                  <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-slate-300">
+                    {card.ability || "No ability"}
+                  </p>
+                  <div className="mt-2 flex flex-col gap-1 text-[10px]">
+                    <button
+                      disabled={!isActive}
+                      onClick={() =>
+                        moves.playCard(card.region, card.id, false)
+                      }
+                      className="w-full rounded bg-sky-500 px-2 py-1 font-medium text-slate-950 disabled:opacity-50"
+                    >
+                      Play face-up ({card.region})
+                    </button>
+                    <div className="grid grid-cols-3 gap-1">
+                      {orderedRegions.map((region) => (
+                        <button
+                          key={`${card.id}-${region}-down`}
+                          disabled={!isActive}
+                          onClick={() => moves.playCard(region, card.id, true)}
+                          className="rounded border border-slate-700 bg-slate-900 px-1 py-1 text-[9px] text-slate-200 disabled:opacity-50"
                         >
-                          <span className="text-slate-400">
-                            P{Number(entry.playerID) + 1}:{" "}
-                          </span>
-                          <span
-                            className={
-                              entry.facedown
-                                ? "text-slate-200"
-                                : colorForRegion(entry.card.region)
-                            }
-                          >
-                            {battleCardLabel(entry)}
-                          </span>
-                        </li>
+                          {region}
+                        </button>
                       ))}
-                    </ul>
-                  )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      <div className="shrink-0 rounded-xl border border-slate-800 bg-slate-900 p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-semibold">Your Hand</h3>
-            <p className="text-xs text-slate-400">
-              Withdraw now: opponent gains {withdrawPoints} VP
-            </p>
-          </div>
+          ))}
+        </div>
+        <div className="mt-1 flex justify-end">
           <button
             disabled={!isActive}
             onClick={() => moves.withdraw()}
@@ -161,44 +276,6 @@ export default function GameBoard(props) {
           >
             Withdraw (lose this battle)
           </button>
-        </div>
-
-        <div className="flex gap-3 overflow-x-auto overflow-y-hidden pb-1">
-          {myHand.map((card) => (
-            <div
-              key={card.id}
-              className="aspect-[1/1.4] w-40 shrink-0 rounded-lg border border-slate-700 bg-slate-950 p-2 sm:w-44 md:w-48"
-            >
-              <p className="text-xs text-slate-400">{card.id}</p>
-              <p
-                className={`text-sm font-semibold ${colorForRegion(card.region)}`}
-              >
-                {card.champion}
-              </p>
-              <p className={`text-xs ${colorForRegion(card.region)}`}>
-                {card.region} • {card.strength}
-              </p>
-              <button
-                disabled={!isActive}
-                onClick={() => moves.playCard(card.region, card.id, false)}
-                className="mt-2 w-full rounded bg-sky-500 px-2 py-1 text-xs font-medium text-slate-950 disabled:opacity-50"
-              >
-                Play face-up in {card.region}
-              </button>
-              <div className="mt-2 grid grid-cols-3 gap-1">
-                {orderedRegions.map((region) => (
-                  <button
-                    key={`${card.id}-${region}-down`}
-                    disabled={!isActive}
-                    onClick={() => moves.playCard(region, card.id, true)}
-                    className="rounded border border-slate-700 bg-slate-900 px-1 py-1 text-[10px] text-slate-200 disabled:opacity-50"
-                  >
-                    {region}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 

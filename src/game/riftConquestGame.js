@@ -20,8 +20,11 @@ const shuffle = (items) => {
 const drawBattleHands = () => {
   const deck = shuffle(cardData.cards);
   return {
-    0: deck.slice(0, BATTLE_HAND_SIZE),
-    1: deck.slice(BATTLE_HAND_SIZE, BATTLE_HAND_SIZE * 2),
+    hands: {
+      0: deck.slice(0, BATTLE_HAND_SIZE),
+      1: deck.slice(BATTLE_HAND_SIZE, BATTLE_HAND_SIZE * 2),
+    },
+    deck: deck.slice(BATTLE_HAND_SIZE * 2),
   };
 };
 
@@ -35,24 +38,121 @@ const shuffledRegionLine = () => shuffle(REGION_NAMES);
 
 const randomInitiativePlayer = () => (Math.random() < 0.5 ? "0" : "1");
 
-const regionStrength = (plays, playerID) =>
-  plays
+const getAdjacentRegions = (G, region) => {
+  const index = G.regionOrder.indexOf(region);
+  const adjacent = [];
+  if (index > 0) adjacent.push(G.regionOrder[index - 1]);
+  if (index >= 0 && index < G.regionOrder.length - 1) {
+    adjacent.push(G.regionOrder[index + 1]);
+  }
+  return adjacent;
+};
+
+const hasFaceUpChampion = (G, playerID, champion) => {
+  for (const region of REGION_NAMES) {
+    const entries = G.board[region] ?? [];
+    if (
+      entries.some(
+        (entry) =>
+          entry.playerID === playerID &&
+          !entry.facedown &&
+          entry.card.champion === champion,
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const anyPlayerHasChampion = (G, champion) => {
+  for (const region of REGION_NAMES) {
+    const entries = G.board[region] ?? [];
+    if (
+      entries.some(
+        (entry) => !entry.facedown && entry.card.champion === champion,
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const hasIreliaGuardingRegion = (G, targetRegion) => {
+  for (const region of REGION_NAMES) {
+    const entries = G.board[region] ?? [];
+    const hasIreliaHere = entries.some(
+      (entry) => !entry.facedown && entry.card.champion === "Irelia",
+    );
+    if (!hasIreliaHere) continue;
+    const adjacent = getAdjacentRegions(G, region);
+    if (adjacent.includes(targetRegion)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const facedownStrengthFor = (G, playerID) =>
+  hasFaceUpChampion(G, playerID, "Zed") ? 4 : FACEDOWN_STRENGTH;
+
+const registerAbilityUse = (G, region, playerID, card, timing) => {
+  if (!card || !card.type || card.type === "None") return;
+  if (!G.abilityLog) {
+    G.abilityLog = [];
+  }
+
+  G.abilityLog.push({
+    region,
+    playerID,
+    cardId: card.id,
+    type: card.type,
+    timing,
+    index: G.abilityLog.length,
+  });
+};
+
+const regionStrength = (G, region, playerID) => {
+  const plays = G.board[region] ?? [];
+
+  const base = plays
     .filter((entry) => entry.playerID === playerID)
     .reduce((sum, entry) => {
       if (entry.facedown) {
-        return sum + FACEDOWN_STRENGTH;
+        return sum + facedownStrengthFor(G, playerID);
       }
       return sum + entry.card.strength;
     }, 0);
+
+  let bonus = 0;
+
+  // Lux: +3 strength in each adjacent region
+  for (const luxRegion of REGION_NAMES) {
+    const entries = G.board[luxRegion] ?? [];
+    const hasLuxHere = entries.some(
+      (entry) =>
+        entry.playerID === playerID &&
+        !entry.facedown &&
+        entry.card.champion === "Lux",
+    );
+    if (!hasLuxHere) continue;
+    const adjacent = getAdjacentRegions(G, luxRegion);
+    if (adjacent.includes(region)) {
+      bonus += 3;
+    }
+  }
+
+  return base + bonus;
+};
 
 const scoreBattleWinner = (G) => {
   let p0 = 0;
   let p1 = 0;
 
   for (const region of G.regionOrder) {
-    const plays = G.board[region];
-    const p0Strength = regionStrength(plays, "0");
-    const p1Strength = regionStrength(plays, "1");
+    const p0Strength = regionStrength(G, region, "0");
+    const p1Strength = regionStrength(G, region, "1");
     if (p0Strength > p1Strength) {
       p0 += 1;
     }
@@ -76,19 +176,21 @@ const otherPlayer = (playerID) => (playerID === "0" ? "1" : "0");
 const computeRegionTotals = (G) => {
   const totals = {};
   for (const region of G.regionOrder) {
-    const plays = G.board[region];
     totals[region] = {
-      0: regionStrength(plays, "0"),
-      1: regionStrength(plays, "1"),
+      0: regionStrength(G, region, "0"),
+      1: regionStrength(G, region, "1"),
     };
   }
   return totals;
 };
 
 const startNewBattle = (G, initiativePlayer) => {
+  const battle = drawBattleHands();
   G.board = emptyBoard();
-  G.hands = drawBattleHands();
+  G.hands = battle.hands;
+  G.deck = battle.deck;
   G.regionOrder = shuffledRegionLine();
+  G.abilityLog = [];
   G.initiativePlayer = initiativePlayer;
 };
 
@@ -109,9 +211,15 @@ export const RiftConquestGame = {
   maxPlayers: 2,
 
   setup: () => ({
-    board: emptyBoard(),
-    hands: drawBattleHands(),
-    regionOrder: shuffledRegionLine(),
+    ...(() => {
+      const battle = drawBattleHands();
+      return {
+        board: emptyBoard(),
+        hands: battle.hands,
+        deck: battle.deck,
+        regionOrder: shuffledRegionLine(),
+      };
+    })(),
     scores: { 0: 0, 1: 0 },
     initiativePlayer: randomInitiativePlayer(),
     lastRoundWinner: null,
@@ -123,6 +231,7 @@ export const RiftConquestGame = {
     summaryByWithdraw: false,
     summaryRegionTotals: null,
     summaryAccepted: { 0: false, 1: false },
+    abilityLog: [],
     forceWinner: null,
   }),
 
@@ -177,15 +286,60 @@ export const RiftConquestGame = {
 
       const card = hand[cardIndex];
       if (!facedown && card.region !== region) {
+        const canOffRegion =
+          card.strength <= 3 &&
+          hasFaceUpChampion(G, ctx.currentPlayer, "Jarvan IV");
+        if (!canOffRegion) {
+          return;
+        }
+      }
+
+      const targetRegionCards = G.board[region];
+      const blockedByIrelia =
+        hasIreliaGuardingRegion(G, region) && targetRegionCards.length >= 3;
+      const fioraPunish = facedown && anyPlayerHasChampion(G, "Fiora");
+
+      const [playedCard] = hand.splice(cardIndex, 1);
+
+      if (blockedByIrelia || fioraPunish) {
+        // Card is discarded with no effect (not placed on board)
         return;
       }
 
-      const [playedCard] = hand.splice(cardIndex, 1);
       G.board[region].push({
         playerID: ctx.currentPlayer,
         card: playedCard,
         facedown,
       });
+
+      if (!facedown && playedCard.type && playedCard.type !== "None") {
+        const timing = playedCard.type === "Instant" ? "instant" : "ongoing";
+        registerAbilityUse(G, region, ctx.currentPlayer, playedCard, timing);
+
+        if (playedCard.champion === "Katarina" && G.deck && G.deck.length > 0) {
+          const adjacentRegions = getAdjacentRegions(G, region);
+          if (adjacentRegions.length > 0) {
+            const targetRegion = adjacentRegions[0];
+            const targetRegionCards = G.board[targetRegion] ?? [];
+            const blockedByIrelia =
+              hasIreliaGuardingRegion(G, targetRegion) &&
+              targetRegionCards.length >= 3;
+            const fioraPunish = anyPlayerHasChampion(G, "Fiora");
+
+            if (!blockedByIrelia && !fioraPunish) {
+              const topCard = G.deck[0];
+              if (topCard) {
+                G.deck.shift();
+                G.board[targetRegion].push({
+                  playerID: ctx.currentPlayer,
+                  card: topCard,
+                  facedown: true,
+                });
+              }
+            }
+          }
+        }
+      }
 
       const battleOver = G.hands["0"].length === 0 && G.hands["1"].length === 0;
       if (!battleOver) {
