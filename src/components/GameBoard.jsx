@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { REGION_NAMES, WIN_VP } from "../game/riftConquestGame";
 import gameRule from "../../game_rule.json" with { type: "json" };
 
@@ -41,8 +42,65 @@ export default function GameBoard(props) {
   const myAccepted = G.summaryAccepted?.[myId] ?? false;
   const abilityLog = G.abilityLog ?? [];
 
+  const [selectedCardId, setSelectedCardId] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const selectedCard =
+    myHand.find((card) => card.id === selectedCardId) ?? null;
+
+  const hasJarvan = Object.values(G.board ?? {}).some((entries) =>
+    entries.some(
+      (entry) =>
+        entry.playerID === myId &&
+        !entry.facedown &&
+        entry.card?.champion === "Jarvan IV",
+    ),
+  );
+
+  const isValidFaceUpRegion = (card, targetRegion) => {
+    if (!card) return false;
+    if (card.region === targetRegion) return true;
+    if (hasJarvan && card.strength <= 3) return true;
+    return false;
+  };
+
+  const attemptPlaySelectedCard = (targetRegion, facedown) => {
+    if (!isActive) {
+      setErrorMessage("Wait for your turn to play.");
+      return;
+    }
+
+    if (!selectedCard) {
+      setErrorMessage("Select a card from your hand first.");
+      return;
+    }
+
+    if (!facedown && !isValidFaceUpRegion(selectedCard, targetRegion)) {
+      setErrorMessage(
+        `Cannot play ${selectedCard.champion} face-up in ${targetRegion}.`,
+      );
+      return;
+    }
+
+    moves.playCard(targetRegion, selectedCard.id, facedown);
+    setSelectedCardId(null);
+  };
+
+  useEffect(() => {
+    if (!errorMessage) return;
+    const t = setTimeout(() => setErrorMessage(""), 2000);
+    return () => clearTimeout(t);
+  }, [errorMessage]);
+
   return (
     <div className="relative mx-auto flex h-full w-full max-w-6xl flex-col gap-3 px-3 pt-3 pb-40">
+      {errorMessage && (
+        <div className="pointer-events-none absolute left-1/2 top-3 z-40 -translate-x-1/2 transform">
+          <div className="rounded-md bg-rose-500/90 px-4 py-2 text-sm font-medium text-white shadow-lg">
+            {errorMessage}
+          </div>
+        </div>
+      )}
       <div className="shrink-0 rounded-xl border border-slate-800 bg-slate-900 p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-slate-300">First to {WIN_VP} VP wins</p>
@@ -86,36 +144,40 @@ export default function GameBoard(props) {
               const myRegionCards = regionCards.filter(
                 (entry) => entry.playerID === playerID,
               );
-              const opponentRegionCards = [...regionCards]
-                .filter((entry) => entry.playerID !== playerID)
-                .reverse();
+              const opponentRegionCards = [...regionCards].filter(
+                (entry) => entry.playerID !== playerID,
+              );
+
+              const handleRegionClick = (event) => {
+                event.stopPropagation();
+                attemptPlaySelectedCard(region, false);
+              };
+
+              const handleRegionRightClick = (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                attemptPlaySelectedCard(region, true);
+              };
 
               return (
                 <div
                   key={region}
                   className="min-h-0 rounded-xl border border-slate-800 bg-slate-900 p-3"
+                  onClick={handleRegionClick}
+                  onContextMenu={handleRegionRightClick}
                 >
-                  <h2
-                    className={`text-lg font-semibold ${colorForRegion(region)}`}
-                  >
-                    {region}
-                  </h2>
-
-                  <div className="mt-2 flex h-[calc(100%-2rem)] min-h-0 flex-col rounded-lg border border-slate-800 bg-slate-950/60 p-2">
+                  <div className="flex h-full flex-col rounded-lg border border-slate-800 bg-slate-950/60 p-2">
+                    {/* Opponent field (top) */}
                     <div className="min-h-0 flex-1 overflow-hidden">
-                      <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                        Opponent (Top)
-                      </p>
                       {opponentRegionCards.length === 0 ? (
-                        <p className="mt-2 text-xs text-slate-600">No cards</p>
+                        <p className="mb-2 h-40 text-xs text-slate-600 flex items-end">No cards</p>
                       ) : (
-                        <ul className="mt-2 overflow-hidden text-xs text-slate-200">
+                        <ul className="mb-2 h-40 overflow-y-auto pr-1 text-xs text-slate-200 flex flex-col justify-end">
                           {opponentRegionCards.map((entry, index) => (
                             <li
                               key={`${region}-op-${index}`}
-                              className={`relative rounded border border-slate-700 bg-slate-800 px-2 py-1 ${index === 0 ? "" : "-mt-3"}`}
+                              className="mt-1 rounded border border-slate-700 bg-slate-800 px-2 py-1 first:mt-0"
                               title={abilityTooltipForEntry(entry)}
-                              style={{ zIndex: 40 - index }}
                             >
                               <span className="text-slate-400">
                                 P{Number(entry.playerID) + 1}:{" "}
@@ -133,10 +195,19 @@ export default function GameBoard(props) {
                           ))}
                         </ul>
                       )}
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                        Opponent (Top)
+                      </p>
                     </div>
 
-                    <div className="my-2 border-t border-slate-800" />
+                    {/* Region name (middle) */}
+                    <h2
+                      className={`my-2 text-center text-sm font-semibold uppercase ${colorForRegion(region)}`}
+                    >
+                      {region}
+                    </h2>
 
+                    {/* Player field (bottom) */}
                     <div className="min-h-0 flex-1 overflow-hidden">
                       <p className="text-[11px] uppercase tracking-wide text-slate-400">
                         You (Bottom)
@@ -144,7 +215,7 @@ export default function GameBoard(props) {
                       {myRegionCards.length === 0 ? (
                         <p className="mt-2 text-xs text-slate-600">No cards</p>
                       ) : (
-                        <ul className="mt-2 space-y-1 overflow-hidden text-xs text-slate-200">
+                        <ul className="mt-2 h-40 space-y-1 overflow-y-auto pr-1 text-xs text-slate-200 flex flex-col">
                           {myRegionCards.map((entry, index) => (
                             <li
                               key={`${region}-me-${index}`}
@@ -212,61 +283,54 @@ export default function GameBoard(props) {
 
       <div className="fixed inset-x-0 bottom-0 z-30 py-1">
         <div className="relative mt-1 flex h-44 items-end justify-center">
-          {myHand.map((card, index) => (
-            <div
-              key={card.id}
-              className="group relative -ml-12 first:ml-0"
-              style={{ zIndex: index + 1 }}
-              title={card.ability || "No ability"}
-            >
-              <div className="flex aspect-[2/3] w-32 items-stretch rounded-xl border border-slate-700 bg-slate-950/95 p-2 text-xs text-slate-100 shadow-lg transition-transform duration-300 ease-out transform-gpu translate-y-2/3 group-hover:translate-y-1/3 sm:w-36 md:w-40">
-                <div className="flex w-full flex-col">
-                  <div className="flex items-baseline justify-between gap-1">
-                    <p className="text-[10px] text-slate-400">{card.id}</p>
-                    <p
-                      className={`text-xs font-semibold ${colorForRegion(card.region)}`}
-                    >
-                      {card.region}
-                    </p>
-                  </div>
-                  <p
-                    className={`mt-0.5 text-sm font-semibold ${colorForRegion(card.region)}`}
-                  >
-                    {card.champion}
-                  </p>
-                  <p className={`text-[11px] ${colorForRegion(card.region)}`}>
-                    STR {card.strength}
-                  </p>
-                  <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-slate-300">
-                    {card.ability || "No ability"}
-                  </p>
-                  <div className="mt-2 flex flex-col gap-1 text-[10px]">
-                    <button
-                      disabled={!isActive}
-                      onClick={() =>
-                        moves.playCard(card.region, card.id, false)
-                      }
-                      className="w-full rounded bg-sky-500 px-2 py-1 font-medium text-slate-950 disabled:opacity-50"
-                    >
-                      Play face-up ({card.region})
-                    </button>
-                    <div className="grid grid-cols-3 gap-1">
-                      {orderedRegions.map((region) => (
-                        <button
-                          key={`${card.id}-${region}-down`}
-                          disabled={!isActive}
-                          onClick={() => moves.playCard(region, card.id, true)}
-                          className="rounded border border-slate-700 bg-slate-900 px-1 py-1 text-[9px] text-slate-200 disabled:opacity-50"
-                        >
-                          {region}
-                        </button>
-                      ))}
+          {myHand.map((card, index) => {
+            const isSelected = selectedCardId === card.id;
+            return (
+              <div
+                key={card.id}
+                className="group relative -ml-12 cursor-pointer first:ml-0"
+                style={{ zIndex: index + 1 }}
+                title={card.ability || "No ability"}
+                onClick={() =>
+                  setSelectedCardId(selectedCardId === card.id ? null : card.id)
+                }
+              >
+                <div
+                  className={
+                    "flex aspect-[2/3] w-32 items-stretch rounded-xl border border-slate-700 bg-slate-950/95 p-2 text-xs text-slate-100 shadow-lg transition-transform duration-300 ease-out transform-gpu translate-y-2/3 group-hover:translate-y-1/3 sm:w-36 md:w-40" +
+                    (isSelected
+                      ? " ring-2 ring-sky-400 shadow-sky-500/40 translate-y-1/3"
+                      : "")
+                  }
+                >
+                  <div className="flex w-full flex-col">
+                    <div className="flex items-baseline justify-between gap-1">
+                      <p className="text-[10px] text-slate-400">{card.id}</p>
+                      <p
+                        className={`text-xs font-semibold ${colorForRegion(card.region)}`}
+                      >
+                        {card.region}
+                      </p>
                     </div>
+                    <p
+                      className={`mt-0.5 text-sm font-semibold ${colorForRegion(card.region)}`}
+                    >
+                      {card.champion}
+                    </p>
+                    <p className={`text-[11px] ${colorForRegion(card.region)}`}>
+                      STR {card.strength}
+                    </p>
+                    <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-slate-300">
+                      {card.ability || "No ability"}
+                    </p>
+                    <p className="mt-2 text-[10px] text-slate-500">
+                      Click to select, then left/right click a region.
+                    </p>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div className="mt-1 flex justify-end">
           <button
