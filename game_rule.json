@@ -1,0 +1,137 @@
+{
+  "game": "RiftConquest",
+  "players": 2,
+
+  "regions": ["Noxus", "Demacia", "Ionia"],
+
+  "winCondition": {
+    "type": "victory_points",
+    "target": 12
+  },
+
+  "setup": {
+    "deck": {
+      "totalCards": 18,
+      "shuffle": true
+    },
+    "handSize": 6,
+    "regionsArrangement": "shuffle_and_place_face_up",
+    "initiative": "random_player"
+  },
+
+  "round": {
+    "phases": [
+      "deal_cards",
+      "alternate_turns",
+      "check_withdraw",
+      "resolve_regions",
+      "score_points",
+      "next_round"
+    ]
+  },
+
+  "turn": {
+    "actionsPerTurn": 1,
+    "availableActions": [
+      {
+        "type": "deploy",
+        "description": "Play a card face-up to its matching region OR face-down (strength = 2) to any region"
+      },
+      {
+        "type": "withdraw",
+        "description": "Retreat from the round and concede regions to opponent"
+      }
+    ]
+  },
+
+  "cardRules": {
+    "faceUp": {
+      "effect": "ability_applies",
+      "strength": "use_card_value"
+    },
+    "faceDown": {
+      "effect": "no_ability",
+      "strength": 2
+    },
+    "typeSystem": {
+      "Instant": "resolve_once_when_played",
+      "Ongoing": "active_while_in_play",
+      "None": "no_effect"
+    }
+  },
+
+  "regionsRules": {
+    "control": "player_with_highest_total_strength",
+    "adjacency": {
+      "description": "regions are in a line; left and right are adjacent"
+    }
+  },
+
+  "combatResolution": {
+    "timing": "after_both_players_finish_or_withdraw",
+    "steps": [
+      "resolve_ongoing_effects",
+      "calculate_strength_per_region",
+      "determine_region_winners"
+    ]
+  },
+
+  "withdrawal": {
+    "allowed": "instead_of_playing_card",
+    "effect": "round_ends_immediately_and_opponent_scores_based_on_cards_remaining",
+    "scoring": {
+      "cardsRemaining": {
+        "0": 6,
+        "1": 5,
+        "2": 4,
+        "3": 3,
+        "4": 2,
+        "5": 2,
+        "6": 2
+      }
+    }
+  },
+
+  "scoring": {
+    "normalWin": {
+      "condition": "win_majority_of_regions",
+      "points": 6
+    },
+    "tiebreaker": {
+      "rule": "player_with_initiative_wins_tie"
+    }
+  },
+
+  "initiative": {
+    "rule": "loser_of_previous_round_goes_first_next_round"
+  },
+
+  "abilities": {
+    "rules": [
+      "effects resolve in order of play",
+      "if conflict occurs, current player's effect resolves first",
+      "face_down_cards_ignore_abilities",
+      "discarded_cards_have_no_effect"
+    ]
+  },
+
+  "gameFlow": {
+    "loop": [
+      "start_round",
+      "players_take_turns",
+      "player_may_withdraw",
+      "resolve_round",
+      "assign_points",
+      "check_win_condition"
+    ],
+    "endCondition": "first_player_to_12_points_wins"
+  },
+
+  "themeMapping": {
+    "card": "champion",
+    "theater": "region",
+    "faceDown": "hidden_unit",
+    "withdraw": "retreat",
+    "strength": "power"
+  }
+}
