@@ -13,16 +13,11 @@ const roomCode    = params.get('room') || sessionStorage.getItem('roomCode');
 const playerIndex = parseInt(params.get('player') ?? sessionStorage.getItem('playerIndex') ?? '0', 10);
 if (!roomCode) location.href = '/';
 
-// ─── Sidebar Tab Switching ─────────────────────────────────────────────────
-document.querySelectorAll('.stab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tab = btn.dataset.tab;
-    document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-  });
-});
+// ─── Guide FAB ────────────────────────────────────────────────────────────
+const guideOverlay = document.getElementById('guideOverlay');
+document.getElementById('guideBtn').addEventListener('click', () => guideOverlay.classList.remove('hidden'));
+document.getElementById('guideClose').addEventListener('click', () => guideOverlay.classList.add('hidden'));
+guideOverlay.addEventListener('click', (e) => { if (e.target === guideOverlay) guideOverlay.classList.add('hidden'); });
 
 // ─── Socket Events ────────────────────────────────────────────────────────
 socket.on('connect', () => {
@@ -138,14 +133,12 @@ function renderBoard(s) {
 
     // Click = face-up deploy, right-click = face-down deploy
     col.addEventListener('click', () => {
-      if (!selectedCard) return;
-      if (!canActNow(s)) return;
+      if (!selectedCard || !canActNow(s)) return;
       deployCard(selectedCard.id, region, deployFaceDown);
     });
     col.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      if (!selectedCard) return;
-      if (!canActNow(s)) return;
+      if (!selectedCard || !canActNow(s)) return;
       deployCard(selectedCard.id, region, true);
     });
 
@@ -163,8 +156,6 @@ function canActNow(s) {
 function buildBoardCard(c, playerIdx, region, s) {
   const card = document.createElement('div');
   card.setAttribute('data-card-id', c.id);
-  card.setAttribute('data-region', region);
-  card.setAttribute('data-player', playerIdx);
 
   if (c.faceUp) {
     const def = getCardDef(c.id);
@@ -183,7 +174,7 @@ function buildBoardCard(c, playerIdx, region, s) {
 
     // Hover → show card info in sidebar
     card.addEventListener('mouseenter', () => showCardInfo(def));
-    card.addEventListener('mouseleave', clearCardInfoOnMouseLeave);
+    card.addEventListener('mouseleave', hideCardInfo);
 
   } else {
     card.className = 'board-card facedown';
@@ -218,10 +209,9 @@ function isFlipTarget(ab, region, cardPlayer, myIdx) {
 // ─── Strength calculation (client-side for display) ────────────────────────
 function calcStrengthClient(s, region, playerIdx) {
   const cards = s.regions[region][playerIdx] || [];
-  const ALL = s.regions;
   let total = 0;
 
-  const zedActive = REGIONS.some(r => (ALL[r][playerIdx] || []).some(c => c.faceUp && c.id === 'I2'));
+  const zedActive = REGIONS.some(r => (s.regions[r][playerIdx] || []).some(c => c.faceUp && c.id === 'I2'));
   const luxRegion = findCardRegion(s, 'D1', playerIdx);
 
   for (const c of cards) {
@@ -268,9 +258,9 @@ function renderHand(hand) {
     if (canAct) {
       el.addEventListener('click', () => selectCard(card));
     }
-    // Hover on hand card → also show card info
+    // Hover on hand card → show card info in sidebar
     el.addEventListener('mouseenter', () => showCardInfo(card));
-    el.addEventListener('mouseleave', clearCardInfoOnMouseLeave);
+    el.addEventListener('mouseleave', hideCardInfo);
 
     container.appendChild(el);
   }
@@ -313,10 +303,9 @@ document.getElementById('btnWithdraw').addEventListener('click', () => {
 });
 
 // ─── Card Info Sidebar ─────────────────────────────────────────────────────
-// Lore text per champion (flavour only)
 const CHAMPION_LORE = {
   Katarina: 'A Noxian assassin who moves without mercy, striking between heartbeats.',
-  Talon: 'The Blade\'s Shadow — silence before the kill.',
+  Talon: "The Blade's Shadow — silence before the kill.",
   Darius: 'The Hand of Noxus. He who hesitates is dead.',
   Swain: 'Grand General of Noxus, master of ravens and dark power.',
   LeBlanc: 'The Deceiver — every truth is a veil over a deeper lie.',
@@ -335,15 +324,12 @@ const CHAMPION_LORE = {
   'Master Yi': 'The Wuju Bladesman — one hundred enemies, one perfect strike.',
 };
 
-let cardInfoTimer = null;
+let cardHideTimer = null;
 
 function showCardInfo(def) {
-  // Auto-switch to card tab
-  switchToTab('card');
-
+  clearTimeout(cardHideTimer);
   document.getElementById('cardInfoIdle').classList.add('hidden');
-  const detail = document.getElementById('cardInfoDetail');
-  detail.classList.remove('hidden');
+  document.getElementById('cardInfoDetail').classList.remove('hidden');
 
   document.getElementById('cidImage').src = `/image/${def.id}${getImgExt(def.id)}`;
   document.getElementById('cidImage').alt = def.champion;
@@ -359,31 +345,20 @@ function showCardInfo(def) {
   typeBadge.className = `cid-type-badge type-${def.type}`;
 
   const abilityBox = document.getElementById('cidAbilityBox');
-  const abilityText = document.getElementById('cidAbility');
   if (def.ability) {
     abilityBox.style.display = '';
-    abilityText.textContent = def.ability;
+    document.getElementById('cidAbility').textContent = def.ability;
   } else {
     abilityBox.style.display = 'none';
   }
-
   document.getElementById('cidLore').textContent = CHAMPION_LORE[def.champion] || '';
 }
 
-function clearCardInfoOnMouseLeave() {
-  // Small delay so quickly crossing from board card to sidebar doesn't flicker
-  cardInfoTimer = setTimeout(() => {
-    // Only hide if nothing new is being hovered
-    // (showCardInfo already cleared any previous timer)
-  }, 300);
-}
-
-function switchToTab(tabKey) {
-  const cap = tabKey.charAt(0).toUpperCase() + tabKey.slice(1);
-  document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab' + cap)?.classList.add('active');
-  document.getElementById('panel' + cap)?.classList.add('active');
+function hideCardInfo() {
+  cardHideTimer = setTimeout(() => {
+    document.getElementById('cardInfoIdle').classList.remove('hidden');
+    document.getElementById('cardInfoDetail').classList.add('hidden');
+  }, 350);
 }
 
 // ─── Log ───────────────────────────────────────────────────────────────────
@@ -393,7 +368,6 @@ function renderLog(log) {
   const container = document.getElementById('logScroll');
   if (!log || log.length === lastLogLength) return;
 
-  // Only append new entries
   const newEntries = log.slice(lastLogLength);
   lastLogLength = log.length;
 
@@ -402,18 +376,9 @@ function renderLog(log) {
     div.className = 'log-entry new';
     div.textContent = entry;
     container.appendChild(div);
-    // Fade from highlighted to normal after a moment
     setTimeout(() => div.classList.remove('new'), 1500);
   }
-  // Scroll to bottom
   container.scrollTop = container.scrollHeight;
-
-  // Pulse the log tab to indicate new activity (if not active)
-  const logTab = document.getElementById('tabLog');
-  if (!logTab.classList.contains('active')) {
-    logTab.style.color = 'var(--gold-light)';
-    setTimeout(() => { logTab.style.color = ''; }, 2000);
-  }
 }
 
 // ─── Ability Modal ─────────────────────────────────────────────────────────
