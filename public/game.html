@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RiftConquest — Battle</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="game-root">
+
+    <!-- ══════════════════════════════════════════════════════════
+         LEFT PANEL — Game Board
+         ══════════════════════════════════════════════════════════ -->
+    <div class="game-left">
+
+      <!-- ── Header ───────────────────────────────────────────── -->
+      <header class="game-header">
+        <div class="hdr-brand cinzel">RiftConquest</div>
+
+        <div class="scoreboard">
+          <div class="score-block my-score">
+            <div class="player-label">You</div>
+            <div class="vp" id="myVP">0</div>
+            <div class="vp-progress"><div class="vp-progress-bar" id="myVPBar" style="width:0%"></div></div>
+            <div class="vp-label">VP</div>
+          </div>
+          <div class="score-vs">VS</div>
+          <div class="score-block opp-score">
+            <div class="player-label">Opponent</div>
+            <div class="vp" id="oppVP">0</div>
+            <div class="vp-progress"><div class="vp-progress-bar" id="oppVPBar" style="width:0%"></div></div>
+            <div class="vp-label">VP</div>
+          </div>
+        </div>
+
+        <div class="round-badge cinzel">Round <span id="roundNum">1</span> · 12 VP wins</div>
+      </header>
+
+      <!-- ── Status Bar ────────────────────────────────────────── -->
+      <div class="status-bar" id="statusBar">Connecting…</div>
+
+      <!-- ── Board ─────────────────────────────────────────────── -->
+      <main class="board" id="board">
+        <!-- Regions injected by JS -->
+      </main>
+
+      <!-- ── Deploy Instructions ──────────────────────────────── -->
+      <div class="deploy-instructions hidden" id="deployInstructions">
+        Click a region to deploy face-up · Right-click any region to deploy face-down
+      </div>
+
+      <!-- ── Hand ─────────────────────────────────────────────── -->
+      <section class="hand-area">
+        <div class="hand-header">
+          <span class="hand-title">Your Champions</span>
+          <div class="actions-bar">
+            <button class="btn btn-secondary btn-sm hidden" id="btnFaceDown">🌑 Hidden Deploy</button>
+            <button class="btn btn-danger btn-sm" id="btnWithdraw">🏳️ Retreat</button>
+            <span class="hand-count" id="oppHandCount">Opp: — cards</span>
+          </div>
+        </div>
+        <div class="hand-cards" id="handCards"></div>
+      </section>
+
+    </div><!-- /game-left -->
+
+    <!-- ══════════════════════════════════════════════════════════
+         RIGHT PANEL — Info Sidebar
+         ══════════════════════════════════════════════════════════ -->
+    <aside class="game-right">
+
+      <!-- ── Tab strip ─────────────────────────────────────────── -->
+      <div class="sidebar-tabs">
+        <button class="stab active" id="tabLog"   data-tab="log">📜 Log</button>
+        <button class="stab"        id="tabGuide" data-tab="guide">📖 Guide</button>
+        <button class="stab"        id="tabCard"  data-tab="card">🃏 Card</button>
+      </div>
+
+      <!-- ── Log Panel ─────────────────────────────────────────── -->
+      <div class="sidebar-panel active" id="panelLog">
+        <h3 class="sidebar-section-title">Round Log</h3>
+        <div class="log-scroll" id="logScroll"></div>
+      </div>
+
+      <!-- ── Guide Panel ───────────────────────────────────────── -->
+      <div class="sidebar-panel" id="panelGuide">
+        <h3 class="sidebar-section-title">How to Play</h3>
+        <div class="guide-content">
+          <div class="guide-block">
+            <div class="guide-icon">⚔️</div>
+            <div>
+              <div class="guide-label">Deploy Face-Up</div>
+              <div class="guide-text">Play a card to its <strong>matching region</strong>. Its ability activates immediately (Instant) or stays active (Ongoing).</div>
+            </div>
+          </div>
+          <div class="guide-block">
+            <div class="guide-icon">🌑</div>
+            <div>
+              <div class="guide-label">Deploy Face-Down</div>
+              <div class="guide-text">Play any card <strong>face-down to any region</strong>. It counts as <strong>strength 2</strong> with no ability. Right-click a region, or use the Hidden Deploy button.</div>
+            </div>
+          </div>
+          <div class="guide-block">
+            <div class="guide-icon">🏳️</div>
+            <div>
+              <div class="guide-label">Retreat</div>
+              <div class="guide-text">Concede the round. Your opponent scores VP based on how many cards they have left in hand.</div>
+            </div>
+          </div>
+          <div class="guide-block">
+            <div class="guide-icon">👑</div>
+            <div>
+              <div class="guide-label">Win Condition</div>
+              <div class="guide-text">First to <strong>12 Victory Points</strong> wins. Each round, the player who controls the <strong>majority of regions</strong> (2 of 3) scores <strong>6 VP</strong>.</div>
+            </div>
+          </div>
+          <div class="guide-block">
+            <div class="guide-icon">📍</div>
+            <div>
+              <div class="guide-label">Regions</div>
+              <div class="guide-text"><strong>Noxus · Demacia · Ionia</strong> are arranged left to right. Adjacent regions matter for several card abilities.</div>
+            </div>
+          </div>
+          <div class="guide-block">
+            <div class="guide-icon">🔄</div>
+            <div>
+              <div class="guide-label">Initiative</div>
+              <div class="guide-text">The loser of each round goes first next round. Ties are broken in favour of the initiative holder.</div>
+            </div>
+          </div>
+          <hr class="guide-divider"/>
+          <div class="guide-retreat-table">
+            <div class="grt-title">Retreat Scoring Table</div>
+            <table>
+              <thead><tr><th>Opp. cards left</th><th>VP scored</th></tr></thead>
+              <tbody>
+                <tr><td>0</td><td>6</td></tr>
+                <tr><td>1</td><td>5</td></tr>
+                <tr><td>2</td><td>4</td></tr>
+                <tr><td>3</td><td>3</td></tr>
+                <tr><td>4–6</td><td>2</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Card Info Panel ───────────────────────────────────── -->
+      <div class="sidebar-panel" id="panelCard">
+        <h3 class="sidebar-section-title">Card Info</h3>
+        <div class="card-info-idle" id="cardInfoIdle">
+          <div class="card-info-idle-icon">🃏</div>
+          <div class="card-info-idle-text">Hover over any<br/>face-up card to see<br/>its full details here.</div>
+        </div>
+        <div class="card-info-detail hidden" id="cardInfoDetail">
+          <div class="cid-image-wrap">
+            <img class="cid-image" id="cidImage" src="" alt="" />
+            <div class="cid-overlay">
+              <span class="cid-strength" id="cidStrength"></span>
+            </div>
+          </div>
+          <div class="cid-body">
+            <div class="cid-name" id="cidName"></div>
+            <div class="cid-region-row">
+              <span class="cid-region-badge" id="cidRegionBadge"></span>
+              <span class="cid-type-badge" id="cidTypeBadge"></span>
+            </div>
+            <div class="cid-ability-box" id="cidAbilityBox">
+              <div class="cid-ability-label">Ability</div>
+              <div class="cid-ability-text" id="cidAbility"></div>
+            </div>
+            <div class="cid-lore" id="cidLore"></div>
+          </div>
+        </div>
+      </div>
+
+    </aside><!-- /game-right -->
+
+  </div><!-- /game-root -->
+
+  <!-- ── Ability Modal ─────────────────────────────────────────── -->
+  <div class="modal-overlay hidden" id="abilityModal">
+    <div class="modal-box">
+      <h3 class="modal-title" id="modalTitle">Ability</h3>
+      <p class="modal-desc" id="modalDesc"></p>
+      <div class="modal-options" id="modalOptions"></div>
+      <div class="modal-footer" id="modalFooter"></div>
+    </div>
+  </div>
+
+  <!-- ── Win Screen ─────────────────────────────────────────────── -->
+  <div class="win-overlay hidden" id="winOverlay">
+    <div class="win-box">
+      <span class="trophy" id="winTrophy">🏆</span>
+      <h2 id="winTitle">Victory!</h2>
+      <p id="winDesc">You conquered the Rift!</p>
+      <button class="btn btn-primary" onclick="location.href='/'">⚔️ Play Again</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
