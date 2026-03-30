@@ -367,6 +367,8 @@ function deployCard(cardId, region, faceDown) {
   deployFaceDown = false;
   document.getElementById('btnFaceDown').classList.add('hidden');
   document.getElementById('btnFaceDown').textContent = '🌑 Hidden Deploy';
+  renderHand(gameState?.myHand);
+  renderBoard(gameState);
 }
 
 document.getElementById('btnFaceDown').addEventListener('click', () => {

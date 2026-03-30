@@ -511,8 +511,14 @@ body {
 .hand-card.region-Demacia.selected { border-color: var(--demacia); box-shadow: 0 0 20px var(--demacia-glow); }
 .hand-card.region-Ionia.selected   { border-color: var(--ionia);   box-shadow: 0 0 20px var(--ionia-glow);   }
 
-/* Deploy instructions */
-.deploy-instructions { text-align: center; font-size: 0.72rem; color: var(--gold-light); padding: 0.35rem 0 0; animation: pulse 1.5s ease-in-out infinite; flex-shrink: 0; }
+/* Deploy instructions in Sidebar */
+.deploy-instructions { 
+  text-align: center; font-size: 0.72rem; color: var(--gold-light); 
+  padding: 0.75rem 0.5rem; background: rgba(0,0,0,0.4); 
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  animation: pulse 1.5s ease-in-out infinite; flex-shrink: 0; 
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
 
 /* ════════════════════════════════════════════════════════════════════════════
    RIGHT SIDEBAR — Card Info (top) + Log (bottom 1/3)
