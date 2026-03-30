@@ -58,13 +58,19 @@ function render() {
     return;
   }
   if (s.pendingAbility) {
-    sb.className = 'status-bar pending';
-    sb.textContent = '⚡ ' + s.pendingAbility.label;
     const isMyAbility = s.pendingAbility.playerIdx === myIndex;
     const isN5OppFlip = s.pendingAbility.type === 'N5_opp_flip' && !isMyAbility;
     const isN5Self    = s.pendingAbility.type === 'N5_self_flip' && isMyAbility;
+
+    // Adjust text for the player who is being forced to flip
+    let displayLabel = s.pendingAbility.label;
+    if (isN5OppFlip) displayLabel = 'LeBlanc: You must flip one of your cards.';
+
+    sb.className = 'status-bar pending';
+    sb.textContent = '⚡ ' + displayLabel;
+
     if (isMyAbility || isN5OppFlip || isN5Self) {
-      openAbilityModal(s.pendingAbility);
+      openAbilityModal(s.pendingAbility, displayLabel);
     }
   } else if (s.currentTurn === myIndex) {
     sb.className = 'status-bar your-turn';
@@ -125,11 +131,14 @@ function renderBoard(s) {
     `;
     board.appendChild(col);
 
-    // Populate cards
+    // Populate cards — wrap in stack container
     const oppSection = col.querySelector('.opp-side');
-    for (const c of oppCards) oppSection.appendChild(buildBoardCard(c, 1 - myIndex, region, s));
+    const oppStack = buildCardStack(oppCards, 1 - myIndex, region, s, true);
+    oppSection.appendChild(oppStack);
+
     const mySection = col.querySelector('.my-side');
-    for (const c of myCards)  mySection.appendChild(buildBoardCard(c, myIndex, region, s));
+    const myStack = buildCardStack(myCards, myIndex, region, s, false);
+    mySection.appendChild(myStack);
 
     // Click = face-up deploy, right-click = face-down deploy
     col.addEventListener('click', () => {
@@ -152,6 +161,20 @@ function canActNow(s) {
   return s && s.currentTurn === myIndex && s.phase === 'playing' && !s.pendingAbility;
 }
 
+// ─── Build stacked card pile for one player in one region ─────────────────
+function buildCardStack(cards, playerIdx, region, s, isOpponent = false) {
+  const stack = document.createElement('div');
+  stack.className = 'card-stack' + (isOpponent ? ' stack-up' : '');
+  // cards[0] = oldest (bottom of pile), cards[last] = newest (uncovered/on top)
+  cards.forEach((c, idx) => {
+    const el = buildBoardCard(c, playerIdx, region, s);
+    el.style.setProperty('--stack-idx', idx);
+    el.style.zIndex = idx + 1;
+    stack.appendChild(el);
+  });
+  return stack;
+}
+
 // ─── Build a single board card element ────────────────────────────────────
 function buildBoardCard(c, playerIdx, region, s) {
   const card = document.createElement('div');
@@ -159,17 +182,15 @@ function buildBoardCard(c, playerIdx, region, s) {
 
   if (c.faceUp) {
     const def = getCardDef(c.id);
-    card.className = 'board-card face-up-hoverable';
+    card.className = 'board-card face-up-hoverable' + (playerIdx !== myIndex ? ' opponent-card' : '');
     card.innerHTML = `
+      <div class="card-face-top">
+        <span class="card-name">${def.champion}</span>
+        <span class="card-str">&#9876; ${def.strength}</span>
+      </div>
       <img src="/image/${c.id}${getImgExt(c.id)}" alt="${def.champion}"
            onerror="this.style.display='none'" />
-      <div class="card-face-info">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span class="card-name">${def.champion}</span>
-          <span class="card-str">⚔ ${def.strength}</span>
-        </div>
-        ${def.type !== 'None' ? `<div><span class="card-type-badge type-${def.type}">${def.type}</span></div>` : ''}
-      </div>
+      ${def.type !== 'None' ? `<span class="card-type-badge type-${def.type} card-type-corner">${def.type}</span>` : ''}
     `;
 
     // Hover → show card info in sidebar
@@ -199,9 +220,9 @@ function buildBoardCard(c, playerIdx, region, s) {
 
 function isFlipTarget(ab, region, cardPlayer, myIdx) {
   if (!ab) return false;
-  if (ab.type === 'flip_any') return true;
+  if (ab.type === 'flip_any' && ab.playerIdx === myIdx) return true;
   if (ab.type === 'flip_adjacent' && ab.playerIdx === myIdx) return true;
-  if (ab.type === 'N5_opp_flip' && ab.playerIdx !== myIdx) return cardPlayer === (1 - myIdx);
+  if (ab.type === 'N5_opp_flip' && ab.playerIdx !== myIdx) return cardPlayer === myIdx;
   if (ab.type === 'N5_self_flip' && ab.playerIdx === myIdx) return cardPlayer === myIdx;
   return false;
 }
@@ -382,7 +403,7 @@ function renderLog(log) {
 }
 
 // ─── Ability Modal ─────────────────────────────────────────────────────────
-function openAbilityModal(ability) {
+function openAbilityModal(ability, customLabel) {
   const modal  = document.getElementById('abilityModal');
   const title  = document.getElementById('modalTitle');
   const desc   = document.getElementById('modalDesc');
@@ -390,7 +411,10 @@ function openAbilityModal(ability) {
   const footer = document.getElementById('modalFooter');
 
   title.textContent = abilityTitle(ability.type);
-  desc.textContent  = ability.label || '';
+  if (ability.type === 'N5_opp_flip' && customLabel) title.textContent = 'LeBlanc — Flip Required';
+
+  const baseLabel = customLabel || ability.label || '';
+  desc.textContent  = baseLabel;
   opts.innerHTML    = '';
   footer.innerHTML  = '';
 
@@ -410,7 +434,7 @@ function openAbilityModal(ability) {
     case 'flip_adjacent':
     case 'N5_opp_flip':
     case 'N5_self_flip': {
-      desc.textContent = ability.label + ' Click the highlighted card on the board.';
+      desc.textContent = baseLabel + ' Click the highlighted card on the board.';
       footer.appendChild(mkBtn('Cancel', 'btn btn-secondary btn-sm', closeModal));
       break;
     }
