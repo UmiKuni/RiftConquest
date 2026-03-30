@@ -92,6 +92,7 @@ function render() {
   } else {
     document.getElementById('btnRsContinue').classList.add('hidden');
     document.getElementById('btnRsSurrender').classList.add('hidden');
+    document.getElementById('btnWithdraw').classList.remove('hidden');
     const hEl = document.getElementById('retreatVPHint'); if (hEl) hEl.classList.remove('hidden');
   }
 
