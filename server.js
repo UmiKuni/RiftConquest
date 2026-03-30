@@ -77,6 +77,7 @@ function createGameState() {
     log: [],
     // Pending ability state (for multi-step abilities)
     pendingAbility: null,
+    abilityQueue: [],
   };
 }
 
@@ -150,6 +151,18 @@ function hasAnyCards(state, playerIdx) {
 }
 
 // ─── Ability Resolution ─────────────────────────────────────────────────────
+
+function handleCardFlippedFaceUp(state, targetCard, targetRegion, targetPlayer) {
+  const cardDef = getCardById(targetCard.id);
+  if (cardDef.type === 'Instant') {
+    state.log.push(`⚡ ${cardDef.champion}'s Instant ability triggered!`);
+    const result = applyInstantAbility(state, targetCard.id, targetPlayer, targetRegion);
+    if (result.pendingAbility) {
+      state.abilityQueue.push(result.pendingAbility);
+    }
+  }
+}
+
 // Returns { newState, pendingAbility } where pendingAbility is non-null if
 // client needs to respond with more info before turn ends.
 function applyInstantAbility(state, cardId, playerIdx, playedRegion) {
@@ -220,6 +233,7 @@ function startNewRound(state) {
   state.extraTurn = [false, false];
   state.quinnEffect = [false, false];
   state.pendingAbility = null;
+  state.abilityQueue = [];
   state.currentTurn = state.initiative;
   state.round++;
   state.phase = 'playing';
@@ -342,7 +356,7 @@ io.on('connection', (socket) => {
     if (faceDown && fioraActive) {
       state.hands[pIdx].splice(handIdx, 1);
       state.log.push(`Fiora discards ${cardDef.champion} (facedown)!`);
-      advanceTurn(state, pIdx, code, room);
+      advanceTurn(state, code, room);
       broadcastState(code);
       return;
     }
@@ -369,7 +383,7 @@ io.on('connection', (socket) => {
             if (totalCards >= 3) {
               state.hands[pIdx].splice(handIdx, 1);
               state.log.push(`Irelia discards ${cardDef.champion} played to ${regionName}!`);
-              advanceTurn(state, pIdx, code, room);
+              advanceTurn(state, code, room);
               broadcastState(code);
               return;
             }
@@ -401,7 +415,7 @@ io.on('connection', (socket) => {
       }
     }
 
-    advanceTurn(state, pIdx, code, room);
+    advanceTurn(state, code, room);
     broadcastState(code);
   });
 
@@ -441,6 +455,7 @@ io.on('connection', (socket) => {
         if (target) {
           target.faceUp = !target.faceUp;
           state.log.push(`${getCardById(ability.sourceCard || 'N2')?.champion || 'Card'}: Flipped ${getCardById(data.targetCardId)?.champion}.`);
+          if (target.faceUp) handleCardFlippedFaceUp(state, target, data.targetRegion, data.targetPlayer);
         }
         state.pendingAbility = null;
         break;
@@ -451,6 +466,7 @@ io.on('connection', (socket) => {
         if (target) {
           target.faceUp = !target.faceUp;
           state.log.push(`LeBlanc: Opponent flipped ${getCardById(data.targetCardId)?.champion}.`);
+          if (target.faceUp) handleCardFlippedFaceUp(state, target, data.targetRegion, pIdx);
         }
         // Now player (LeBlanc owner) flips one of theirs
         state.pendingAbility = { type: 'N5_self_flip', playerIdx: ability.playerIdx, label: 'LeBlanc: Now flip one of your own cards.' };
@@ -462,6 +478,7 @@ io.on('connection', (socket) => {
         if (target) {
           target.faceUp = !target.faceUp;
           state.log.push(`LeBlanc: You flipped ${getCardById(data.targetCardId)?.champion}.`);
+          if (target.faceUp) handleCardFlippedFaceUp(state, target, data.targetRegion, pIdx);
         }
         state.pendingAbility = null;
         break;
@@ -501,8 +518,16 @@ io.on('connection', (socket) => {
       }
     }
 
-    // After resolving ability, advance turn (unless extra turn)
-    advanceTurn(state, ability.playerIdx, code, room);
+    if (!state.pendingAbility && state.abilityQueue.length > 0) {
+      state.pendingAbility = state.abilityQueue.shift();
+      broadcastState(code);
+      return;
+    }
+
+    // After resolving ability sequence, advance turn 
+    if (!state.pendingAbility) {
+      advanceTurn(state, code, room);
+    }
     broadcastState(code);
   });
 
@@ -582,7 +607,10 @@ io.on('connection', (socket) => {
 });
 
 // ─── Advance Turn Helper ─────────────────────────────────────────────────────
-function advanceTurn(state, pIdx, code, room) {
+function advanceTurn(state, code, room) {
+  const pIdx = state.currentTurn;
+  const oppIdx = 1 - pIdx;
+
   // Check for empty hands (both players)
   const bothEmpty = state.hands[0].length === 0 && state.hands[1].length === 0;
 
@@ -593,15 +621,20 @@ function advanceTurn(state, pIdx, code, room) {
   }
 
   // Yasuo extra turn
-  if (state.extraTurn[pIdx]) {
-    state.extraTurn[pIdx] = false;
-    state.currentTurn = pIdx;
-    state.log.push(`Player ${pIdx + 1} gets an extra turn (Yasuo)!`);
+  if (state.extraTurn[0]) {
+    state.extraTurn[0] = false;
+    state.currentTurn = 0;
+    state.log.push(`Player 1 gets an extra turn (Yasuo)!`);
+    return;
+  }
+  if (state.extraTurn[1]) {
+    state.extraTurn[1] = false;
+    state.currentTurn = 1;
+    state.log.push(`Player 2 gets an extra turn (Yasuo)!`);
     return;
   }
 
   // If opponent already withdrawn, stay on current player if they have cards
-  const oppIdx = 1 - pIdx;
   if (state.withdrawn[oppIdx]) {
     if (state.hands[pIdx].length > 0) {
       state.currentTurn = pIdx;
