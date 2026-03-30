@@ -439,9 +439,20 @@ io.on('connection', (socket) => {
         // data: { deploy: bool, regionName: string|null }
         if (data.deploy && state.deck.length > 0 && data.regionName) {
           const topCard = state.deck.shift();
-          // Must be adjacent to Noxus (where Katarina was played)
-          state.regions[data.regionName][pIdx].push({ id: topCard.id, faceUp: false });
-          state.log.push(`Katarina: ${pIdx === 0 ? 'You' : 'Opponent'} deployed ${topCard.champion} facedown to ${data.regionName}.`);
+          
+          // D5 Fiora check: discard if either player has an active Fiora
+          const fioraActive = Object.values(state.regions).some(r =>
+            r[1 - pIdx].some(c => c.faceUp && c.id === 'D5') ||
+            r[pIdx].some(c => c.faceUp && c.id === 'D5')
+          );
+
+          if (fioraActive) {
+            state.log.push(`Katarina: ${pIdx === 0 ? 'You' : 'Opponent'} tried to deploy ${topCard.champion} facedown to ${data.regionName}, but Fiora discarded it!`);
+          } else {
+            // Must be adjacent to Noxus (where Katarina was played)
+            state.regions[data.regionName][pIdx].push({ id: topCard.id, faceUp: false });
+            state.log.push(`Katarina: ${pIdx === 0 ? 'You' : 'Opponent'} deployed ${topCard.champion} facedown to ${data.regionName}.`);
+          }
         } else {
           state.log.push(`Katarina: ${pIdx === 0 ? 'You' : 'Opponent'} chose not to deploy.`);
         }
