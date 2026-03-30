@@ -480,30 +480,39 @@ body {
 .hand-count { font-size: 0.65rem; color: var(--text-muted); }
 .actions-bar { display: flex; gap: 0.5rem; flex-shrink: 0; align-items: center; flex-wrap: wrap; }
 
-.hand-cards { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.25rem; align-items: flex-end; }
+.hand-cards { display: flex; justify-content: center; align-items: flex-end; padding-top: 2rem; overflow: visible; }
 
 .hand-card {
-  flex-shrink: 0; width: 68px; border-radius: var(--radius-sm); overflow: hidden;
-  cursor: pointer; border: 2px solid transparent;
-  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  flex-shrink: 0; width: 88px; border-radius: var(--radius-sm); overflow: visible;
+  cursor: pointer; border: 2px solid transparent; background: #000;
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), border-color 0.2s, box-shadow 0.2s, z-index 0s;
   position: relative; box-shadow: var(--shadow-card);
+  display: flex; flex-direction: column-reverse; /* image bottom, info top */
+  margin: 0 -0.35rem -40px; /* Overlap slightly & push into the floor viewport */
+  z-index: 10;
 }
-.hand-card:hover { transform: translateY(-8px) scale(1.06); }
-.hand-card.selected { border-color: var(--gold); box-shadow: 0 0 20px rgba(200,155,60,0.6), var(--shadow-card); transform: translateY(-12px) scale(1.08); }
-.hand-card img { width: 100%; height: 52px; object-fit: cover; display: block; }
-.hand-card .card-info { padding: 0.12rem 0.22rem; background: rgba(0,0,0,0.9); }
-.hand-card .card-info .c-name { font-family: 'Cinzel', serif; font-size: 0.48rem; color: var(--gold-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
-.hand-card .card-info .c-region { font-size: 0.42rem; color: var(--text-secondary); }
-.hand-card .card-info .c-str { font-size: 0.58rem; font-weight: 700; float: right; color: #f0e060; }
+/* Hit-box extension to prevent hover stutter when sliding up */
+.hand-card::after {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; bottom: -80px; 
+  z-index: -1;
+}
+.hand-card:hover { transform: translateY(-48px); z-index: 30; }
+.hand-card.selected { border-color: var(--gold); box-shadow: 0 0 20px rgba(200,155,60,0.6), var(--shadow-card); transform: translateY(-55px); z-index: 25; }
+.hand-card img { width: 100%; height: 75px; object-fit: cover; display: block; border-top: 1px solid rgba(255,255,255,0.08); }
+.hand-card .card-info { padding: 0.25rem 0.35rem; background: rgba(0,0,0,0.92); border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.hand-card .card-info .c-name { font-family: 'Cinzel', serif; font-size: 0.55rem; color: var(--gold-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; padding-bottom: 2px; }
+.hand-card .card-info .c-region { font-size: 0.45rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+.hand-card .card-info .c-str { font-size: 0.65rem; font-weight: 700; float: right; color: #e0d8c0; }
 .hand-card.region-Noxus   { border-color: rgba(192,57,43,0.3); }
 .hand-card.region-Demacia { border-color: rgba(41,128,185,0.3); }
 .hand-card.region-Ionia   { border-color: rgba(142,68,173,0.3); }
-.hand-card.region-Noxus.selected   { border-color: var(--noxus);   box-shadow: 0 0 20px var(--noxus-glow);   transform: translateY(-14px) scale(1.1); }
-.hand-card.region-Demacia.selected { border-color: var(--demacia); box-shadow: 0 0 20px var(--demacia-glow); transform: translateY(-14px) scale(1.1); }
-.hand-card.region-Ionia.selected   { border-color: var(--ionia);   box-shadow: 0 0 20px var(--ionia-glow);   transform: translateY(-14px) scale(1.1); }
+.hand-card.region-Noxus.selected   { border-color: var(--noxus);   box-shadow: 0 0 20px var(--noxus-glow);   }
+.hand-card.region-Demacia.selected { border-color: var(--demacia); box-shadow: 0 0 20px var(--demacia-glow); }
+.hand-card.region-Ionia.selected   { border-color: var(--ionia);   box-shadow: 0 0 20px var(--ionia-glow);   }
 
 /* Deploy instructions */
-.deploy-instructions { text-align: center; font-size: 0.72rem; color: var(--gold-light); padding: 0.25rem 0; animation: pulse 1.5s ease-in-out infinite; flex-shrink: 0; }
+.deploy-instructions { text-align: center; font-size: 0.72rem; color: var(--gold-light); padding: 0.35rem 0 0; animation: pulse 1.5s ease-in-out infinite; flex-shrink: 0; }
 
 /* ════════════════════════════════════════════════════════════════════════════
    RIGHT SIDEBAR — Card Info (top) + Log (bottom 1/3)
