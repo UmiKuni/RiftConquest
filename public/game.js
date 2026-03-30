@@ -46,8 +46,6 @@ function render() {
   // Scores & Round
   document.getElementById('myVP').textContent  = s.scores[myIndex];
   document.getElementById('oppVP').textContent = s.scores[1 - myIndex];
-  document.getElementById('myVPBar').style.width  = Math.min(s.scores[myIndex] / 12 * 100, 100) + '%';
-  document.getElementById('oppVPBar').style.width = Math.min(s.scores[1 - myIndex] / 12 * 100, 100) + '%';
   document.getElementById('roundNum').textContent = s.round;
 
   // Initiative & Score block glowing
@@ -74,10 +72,10 @@ function render() {
   }
   if (s.phase === 'roundEnd') {
     const isMyWin = s.roundSummary && s.roundSummary.winner === myIndex;
-    const color = isMyWin ? '#10b981' : '#e74c3c';
+    const color = isMyWin ? '#e0d8c0' : '#ff3838';
     const text = isMyWin ? 'You won the round! ' : 'Opponent won the round! ';
     
-    sb.innerHTML = `<span style="color:${color}; font-weight:bold">${text}</span><span style="color:#f1c40f">(${s.roundSummary.reason})</span> <strong style="color:#10b981">+${s.roundSummary.points} VP</strong>`;
+    sb.innerHTML = `<span style="color:${color}; font-weight:bold">${text}</span><span style="color:#f1c40f">(${s.roundSummary.reason})</span> <strong style="color:${color}">+${s.roundSummary.points} VP</strong>`;
 
     document.getElementById('btnFaceDown').classList.add('hidden');
     document.getElementById('btnWithdraw').classList.add('hidden');
@@ -116,7 +114,7 @@ function render() {
     sb.className = 'status-bar your-turn';
     sb.textContent = '⚔️ Your turn — select a champion, then click a region.';
   } else {
-    sb.className = 'status-bar';
+    sb.className = 'status-bar opp-turn';
     sb.textContent = '⏳ Waiting for opponent…';
   }
 

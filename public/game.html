@@ -18,23 +18,30 @@
         <div class="hdr-brand cinzel">RiftConquest</div>
         <div class="scoreboard">
           <div class="score-block my-score" id="myScoreBlock">
-            <div class="player-label">You <span class="initiative-badge" id="myInitiativeBadge">1st</span></div>
-            <div class="vp" id="myVP">0</div>
-            <div class="vp-progress"><div class="vp-progress-bar" id="myVPBar" style="width:0%"></div></div>
-            <div class="vp-label">VP</div>
-          </div>
-          <div class="score-vs">VS</div>
-          <div class="score-block opp-score" id="oppScoreBlock">
-            <div class="player-label">
-              Opponent <span class="initiative-badge" id="oppInitiativeBadge">2nd</span>
+            <div class="score-info">
+              <span class="player-label">You</span>
+              <span class="initiative-badge" id="myInitiativeBadge">1st</span>
             </div>
-            <div class="vp" id="oppVP">0</div>
-            <div class="vp-progress"><div class="vp-progress-bar" id="oppVPBar" style="width:0%"></div></div>
-            <div class="vp-label">VP</div>
-            
+            <div class="score-points">
+              <span class="vp" id="myVP">0</span>
+              <span class="vp-label">VP</span>
+            </div>
+          </div>
+          
+          <div class="score-vs">VS</div>
+          
+          <div class="score-block opp-score" id="oppScoreBlock">
+            <div class="score-points">
+              <span class="vp" id="oppVP">0</span>
+              <span class="vp-label">VP</span>
+            </div>
+            <div class="score-info">
+              <span class="initiative-badge" id="oppInitiativeBadge">2nd</span>
+              <span class="player-label">Opponent</span>
+            </div>
             <div class="opp-cards-left" title="Opponent cards remaining">
-              <div class="icon">🃏</div>
-              <div class="count" id="oppHandCountBadge">6</div>
+              <span class="icon">🃏</span>
+              <span class="count" id="oppHandCountBadge">6</span>
             </div>
           </div>
         </div>
@@ -103,16 +110,16 @@
 
       <!-- Round Log -->
       <div class="sidebar-log">
-        <div class="sidebar-log-title">📜 Round Log</div>
+        <div class="log-header">
+          <div class="sidebar-log-title">📜 Round Log</div>
+          <button class="guide-btn-sidebar" id="guideBtn" title="How to play">? Guide</button>
+        </div>
         <div class="log-scroll" id="logScroll"></div>
       </div>
 
     </aside>
 
   </div><!-- /game-root -->
-
-  <!-- ── Guide FAB ── -->
-  <button class="guide-fab" id="guideBtn" title="How to play">?</button>
 
   <!-- ── Guide Popup ── -->
   <div class="guide-overlay hidden" id="guideOverlay">
