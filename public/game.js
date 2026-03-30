@@ -162,7 +162,10 @@ function renderBoard(s) {
 
     col.innerHTML = `
       <div class="region-header">
-        <span class="region-name">${region}</span>
+        <div class="region-title-wrap">
+          <img src="/image/Icon_${region}.webp" class="region-icon" alt="" onerror="this.style.display='none'">
+          <span class="region-name">${region}</span>
+        </div>
         ${crown.includes('region-result-badge') ? crown : ''}
         <div class="region-strength-bar">
           <span class="str-value str-my">${myStr}</span>
