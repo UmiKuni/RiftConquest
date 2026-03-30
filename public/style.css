@@ -111,7 +111,29 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
+}
+
+/* ─── Region Badges (Round End) ─── */
+.region-result-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: auto;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.region-result-badge.win {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.8);
+  color: #10b981;
+}
+.region-result-badge.lose {
+  background: rgba(231, 76, 60, 0.2);
+  border: 1px solid rgba(231, 76, 60, 0.8);
+  color: #e74c3c;
 }
 .lobby-logo .subtitle { font-family: 'Cinzel', serif; font-size: 0.75rem; color: var(--text-secondary); letter-spacing: 0.25em; text-transform: uppercase; margin-top: 0.25rem; }
 
@@ -145,6 +167,84 @@ body {
   background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: var(--radius-sm);
   color: var(--text-primary); font-family: 'Cinzel', serif; font-size: 1.1rem; letter-spacing: 0.3em;
   text-align: center; text-transform: uppercase; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.score-block {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1rem;
+  width: 140px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  text-align: center;
+  position: relative;
+  transition: all 0.3s ease;
+}
+.score-block.active-turn {
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.35);
+  border-color: #f1c40f;
+}
+
+.player-label {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+}
+
+.initiative-badge {
+  font-size: 0.65rem;
+  background: rgba(255, 215, 0, 0.2);
+  color: #f1c40f;
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.opp-cards-left {
+  position: absolute;
+  right: -36px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  padding: 6px 4px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+.score-block.active-turn .opp-cards-left {
+  border-color: var(--gold);
+  box-shadow: 0 0 10px rgba(200, 155, 60, 0.4);
+}
+.opp-cards-left .icon {
+  font-size: 1.1rem;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+.opp-cards-left .count {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.retreat-vp-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-left: 0.75rem;
+  font-style: italic;
+  display: inline-block;
+  vertical-align: middle;
 }
 .input-field:focus { border-color: var(--gold); box-shadow: 0 0 12px rgba(200,155,60,0.2); }
 .input-field::placeholder { color: var(--text-muted); letter-spacing: 0.1em; font-size: 0.85rem; }

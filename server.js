@@ -54,18 +54,15 @@ function getCardById(id) {
 }
 
 // ─── Room State Factory ─────────────────────────────────────────────────────
-function createGameState() {
-  const deck = shuffle([...CARDS]);
-  const hand0 = deck.splice(0, 6);
-  const hand1 = deck.splice(0, 6);
+function createGameState(initiative = 0) {
   return {
     phase: 'playing',          // 'playing' | 'roundEnd' | 'gameOver'
-    round: 1,
-    currentTurn: 0,            // 0 or 1 (index of player whose turn it is)
-    initiative: 0,             // who goes first next round
+    round: 0,
+    currentTurn: initiative,            // 0 or 1 (index of player whose turn it is)
+    initiative: initiative,             // who goes first next round
     scores: [0, 0],
-    deck,                      // remaining deck
-    hands: [hand0, hand1],     // each player's hand (full card objects)
+    deck: [],                      
+    hands: [[], []],     
     withdrawn: [false, false],
     extraTurn: [false, false],  // Yasuo effect
     quinnEffect: [false, false],// Quinn effect
@@ -202,24 +199,9 @@ function applyInstantAbility(state, cardId, playerIdx, playedRegion) {
   return { state, pendingAbility: null };
 }
 
-// ─── Score a Round ──────────────────────────────────────────────────────────
-function scoreRound(state) {
-  const regionResults = resolveRegions(state);
-  let wins0 = 0, wins1 = 0;
-  for (const r of REGIONS) {
-    let winner = regionResults[r];
-    if (winner === null) winner = state.initiative; // initiative breaks ties
-    if (winner === 0) wins0++;
-    else wins1++;
-  }
-
-  let winner = wins0 > wins1 ? 0 : 1;
-  state.scores[winner] += 6;
-  state.log.push(`Round ${state.round} over. Player ${winner + 1} wins ${wins0 > wins1 ? wins0 : wins1} regions and scores 6 VP! Score: ${state.scores[0]}-${state.scores[1]}`);
-
-  // Initiative goes to loser
-  state.initiative = 1 - winner;
-  return state;
+// Helper for withdrawal score
+function retreatVP(oppHandCount) {
+  return WITHDRAWAL_SCORE[Math.min(oppHandCount, 6)] || 2;
 }
 
 // ─── Start new round ────────────────────────────────────────────────────────
@@ -304,8 +286,9 @@ io.on('connection', (socket) => {
     socket.join(code);
 
     // Start game
-    room.state = createGameState();
-    room.state.log.push(`--- Round 1 begins. Player ${room.state.initiative + 1} has initiative ---`);
+    const startingInitiative = Math.floor(Math.random() * 2);
+    room.state = createGameState(startingInitiative);
+    startNewRound(room.state);
 
     io.to(code).emit('gameStarted', { code });
     broadcastState(code);
@@ -556,24 +539,42 @@ io.on('connection', (socket) => {
     if (state.pendingAbility) return socket.emit('actionError', 'Resolve pending ability first.');
 
     state.withdrawn[pIdx] = true;
-    const oppIdx = 1 - pIdx;
-    const oppHandSize = state.hands[oppIdx].length;
-    const vpGained = WITHDRAWAL_SCORE[Math.min(oppHandSize, 6)] || 2;
-    state.scores[oppIdx] += vpGained;
-    state.log.push(`Player ${pIdx + 1} retreats! Player ${oppIdx + 1} scores ${vpGained} VP. Score: ${state.scores[0]}-${state.scores[1]}`);
 
-    // Check win
-    if (state.scores[oppIdx] >= 12) {
-      state.phase = 'gameOver';
-      state.winner = oppIdx;
-      state.log.push(`🏆 Player ${oppIdx + 1} wins the game with ${state.scores[oppIdx]} VP!`);
-      broadcastState(code);
-      return;
-    }
-
-    // Start new round
-    startNewRound(state);
+    // End round normally to go to roundEnd phase
+    endRound(state, code, room);
     broadcastState(code);
+  });
+
+  // READY FOR NEXT ROUND
+  socket.on('readyForNextRound', () => {
+    const found = getRoomOfSocket(socket.id);
+    if (!found) return;
+    const { code, room } = found;
+    if (room.state.phase !== 'roundEnd') return;
+    const pIdx = playerIndexOf(room, socket.id);
+    if (pIdx > -1) {
+      room.state.readyForNextRound[pIdx] = true;
+      if (room.state.readyForNextRound[0] && room.state.readyForNextRound[1]) {
+        room.state.initiative = 1 - room.state.initiative;
+        startNewRound(room.state);
+      }
+      broadcastState(code);
+    }
+  });
+
+  // SURRENDER
+  socket.on('surrenderMatch', () => {
+    const found = getRoomOfSocket(socket.id);
+    if (!found) return;
+    const { code, room } = found;
+    if (room.state.phase === 'gameOver') return;
+    const pIdx = playerIndexOf(room, socket.id);
+    if (pIdx > -1) {
+      room.state.phase = 'gameOver';
+      room.state.surrender = true;
+      room.state.winner = 1 - pIdx;
+      broadcastState(code);
+    }
   });
 
   // REJOIN (game.html reconnects after redirect)
@@ -660,15 +661,49 @@ function advanceTurn(state, code, room) {
 }
 
 function endRound(state, code, room) {
-  state.phase = 'roundEnd';
-  scoreRound(state);
+  state.log.push('─── ROUND END ───');
+  
+  let roundWinner = null;
+  let vpScored = 0;
+  let reason = '';
+
+  if (state.withdrawn[0]) {
+    roundWinner = 1;
+    const p2HandCount = state.hands[1].length;
+    vpScored = retreatVP(p2HandCount);
+    reason = 'Player 1 Retreated';
+    state.log.push(`Player 1 retreated. Player 2 gains ${vpScored} VP (Opp. hand: ${p2HandCount}).`);
+  } else if (state.withdrawn[1]) {
+    roundWinner = 0;
+    const p1HandCount = state.hands[0].length;
+    vpScored = retreatVP(p1HandCount);
+    reason = 'Player 2 Retreated';
+    state.log.push(`Player 2 retreated. Player 1 gains ${vpScored} VP (Opp. hand: ${p1HandCount}).`);
+  } else {
+    // Normal resolving
+    const regionResults = resolveRegions(state);
+    let p1Reg = 0, p2Reg = 0;
+    for (const r of REGIONS) {
+      if (regionResults[r] === 0) p1Reg++;
+      else p2Reg++;
+    }
+
+    if (p1Reg > p2Reg) { roundWinner = 0; vpScored = 6; reason = 'Controlled more Regions'; }
+    else if (p2Reg > p1Reg) { roundWinner = 1; vpScored = 6; reason = 'Controlled more Regions'; }
+    else { roundWinner = state.initiative; vpScored = 6; reason = 'Tie breaker (Initiative)'; }
+    state.log.push(`Player ${roundWinner + 1} controls more regions and gains 6 VP!`);
+  }
+
+  state.scores[roundWinner] += vpScored;
 
   if (state.scores[0] >= 12 || state.scores[1] >= 12) {
     state.phase = 'gameOver';
     state.winner = state.scores[0] >= 12 ? 0 : 1;
     state.log.push(`🏆 Player ${state.winner + 1} wins the game!`);
   } else {
-    startNewRound(state);
+    state.phase = 'roundEnd';
+    state.roundSummary = { winner: roundWinner, points: vpScored, reason };
+    state.readyForNextRound = [false, false];
   }
 }
 

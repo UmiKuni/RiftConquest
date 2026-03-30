@@ -50,6 +50,21 @@ function render() {
   document.getElementById('oppVPBar').style.width = Math.min(s.scores[1 - myIndex] / 12 * 100, 100) + '%';
   document.getElementById('roundNum').textContent = s.round;
 
+  // Initiative & Score block glowing
+  const isMyInitiative = s.initiative === myIndex;
+  document.getElementById('myInitiativeBadge').textContent = isMyInitiative ? '1st' : '2nd';
+  document.getElementById('oppInitiativeBadge').textContent = isMyInitiative ? '2nd' : '1st';  
+  document.getElementById('myScoreBlock').classList.toggle('active-turn', s.currentTurn === myIndex && s.phase !== 'roundEnd');
+  document.getElementById('oppScoreBlock').classList.toggle('active-turn', s.currentTurn !== myIndex && s.phase !== 'roundEnd');
+  document.getElementById('oppHandCountBadge').textContent = s.opponentHandCount;
+
+  const hintEl = document.getElementById('retreatVPHint');
+  if (hintEl) {
+    const retreatVPMap = { 0: 6, 1: 5, 2: 4, 3: 3, 4: 2, 5: 2, 6: 2 };
+    const vpOppScores = retreatVPMap[Math.min(s.opponentHandCount, 6)] || 2;
+    hintEl.textContent = `(Opponent scores +${vpOppScores} VP)`;
+  }
+
   // Status bar
   const sb = document.getElementById('statusBar');
   if (s.phase === 'gameOver') {
@@ -57,6 +72,31 @@ function render() {
     showWinScreen(s.winner === myIndex);
     return;
   }
+  if (s.phase === 'roundEnd') {
+    const isMyWin = s.roundSummary && s.roundSummary.winner === myIndex;
+    const color = isMyWin ? '#10b981' : '#e74c3c';
+    const text = isMyWin ? 'You won the round! ' : 'Opponent won the round! ';
+    
+    sb.innerHTML = `<span style="color:${color}; font-weight:bold">${text}</span><span style="color:#f1c40f">(${s.roundSummary.reason})</span> <strong style="color:#10b981">+${s.roundSummary.points} VP</strong>`;
+
+    document.getElementById('btnFaceDown').classList.add('hidden');
+    document.getElementById('btnWithdraw').classList.add('hidden');
+    const hEl = document.getElementById('retreatVPHint'); if (hEl) hEl.classList.add('hidden');
+
+    if (s.readyForNextRound[myIndex]) {
+      document.getElementById('btnRsContinue').classList.add('hidden');
+      document.getElementById('btnRsSurrender').classList.add('hidden');
+      sb.innerHTML += '<br/><i style="opacity:0.8; font-size:0.9em">(Waiting for opponent...)</i>';
+    } else {
+      document.getElementById('btnRsContinue').classList.remove('hidden');
+      document.getElementById('btnRsSurrender').classList.remove('hidden');
+    }
+  } else {
+    document.getElementById('btnRsContinue').classList.add('hidden');
+    document.getElementById('btnRsSurrender').classList.add('hidden');
+    const hEl = document.getElementById('retreatVPHint'); if (hEl) hEl.classList.remove('hidden');
+  }
+
   if (s.pendingAbility) {
     const isMyAbility = s.pendingAbility.playerIdx === myIndex;
     const isN5OppFlip = s.pendingAbility.type === 'N5_opp_flip' && !isMyAbility;
@@ -84,8 +124,6 @@ function render() {
   renderHand(s.myHand);
   renderLog(s.log);
 
-  document.getElementById('oppHandCount').textContent = `Opp: ${s.opponentHandCount} cards`;
-
   const canAct = s.currentTurn === myIndex && s.phase === 'playing' && !s.pendingAbility;
   document.getElementById('btnWithdraw').disabled = !canAct;
   document.getElementById('btnFaceDown').classList.toggle('hidden', !selectedCard || !canAct);
@@ -107,17 +145,31 @@ function renderBoard(s) {
     const oppCards = s.regions[region][1 - myIndex]  || [];
 
     let crown = '';
-    if (myStr > oppStr) crown = '<span class="control-crown" title="You control this region">👑</span>';
-    if (oppStr > myStr) crown = '<span class="control-crown" style="filter:grayscale(1)" title="Opponent controls this region">👑</span>';
+    if (s.phase === 'roundEnd' && (!s.roundSummary || !s.roundSummary.reason.includes('Retreated'))) {
+      let rWinner = null;
+      if (myStr > oppStr) rWinner = myIndex;
+      else if (oppStr > myStr) rWinner = 1 - myIndex;
+      else rWinner = s.initiative;
+      
+      if (rWinner === myIndex) {
+        crown = '<span class="region-result-badge win">WON</span>';
+      } else {
+        crown = '<span class="region-result-badge lose">LOST</span>';
+      }
+    } else {
+      if (myStr > oppStr) crown = '<span class="control-crown" title="You control this region">👑</span>';
+      if (oppStr > myStr) crown = '<span class="control-crown" style="filter:grayscale(1)" title="Opponent controls this region">👑</span>';
+    }
 
     col.innerHTML = `
       <div class="region-header">
         <span class="region-name">${region}</span>
+        ${crown.includes('region-result-badge') ? crown : ''}
         <div class="region-strength-bar">
           <span class="str-value str-my">${myStr}</span>
           <span class="str-sep">:</span>
           <span class="str-value str-opp">${oppStr}</span>
-          ${crown}
+          ${!crown.includes('region-result-badge') ? crown : ''}
         </div>
       </div>
       <div class="region-body">
@@ -525,11 +577,31 @@ function showWinScreen(iWon) {
   const win = document.getElementById('winOverlay');
   document.getElementById('winTrophy').textContent = iWon ? '🏆' : '💀';
   document.getElementById('winTitle').textContent  = iWon ? 'Victory!' : 'Defeated!';
-  document.getElementById('winDesc').textContent   = iWon
+
+  let desc = iWon
     ? `You conquered the Rift with ${gameState.scores[myIndex]} VP!`
     : `Opponent reached ${gameState.scores[1 - myIndex]} VP. Don't give up.`;
+
+  if (gameState.surrender) {
+    if (iWon) {
+      desc = `Opponent Surrendered! You gain roughly +15 ELO (feature coming soon).`;
+    } else {
+      desc = `You Surrendered. You lose roughly -15 ELO (feature coming soon).`;
+    }
+  }
+
+  document.getElementById('winDesc').textContent = desc;
   win.classList.remove('hidden');
 }
+
+document.getElementById('btnRsContinue').addEventListener('click', () => {
+  if (gameState && gameState.phase === 'roundEnd') socket.emit('readyForNextRound');
+});
+document.getElementById('btnRsSurrender').addEventListener('click', () => {
+  if (confirm('Are you sure you want to surrender the entire game? You will lose ELO!')) {
+    socket.emit('surrenderMatch');
+  }
+});
 
 // ─── Toast ─────────────────────────────────────────────────────────────────
 function showToast(msg, isError = false) {
