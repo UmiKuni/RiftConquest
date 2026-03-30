@@ -1,41 +1,50 @@
 const socket = io();
-const REGIONS = ['Noxus', 'Demacia', 'Ionia'];
+const REGIONS = ["Noxus", "Demacia", "Ionia"];
 
 // ─── State ─────────────────────────────────────────────────────────────────
-let gameState    = null;
-let myIndex      = null;
+let gameState = null;
+let myIndex = null;
 let selectedCard = null;
 let deployFaceDown = false;
 
 // ─── Room & Player from URL ────────────────────────────────────────────────
-const params      = new URLSearchParams(location.search);
-const roomCode    = params.get('room') || sessionStorage.getItem('roomCode');
-const playerIndex = parseInt(params.get('player') ?? sessionStorage.getItem('playerIndex') ?? '0', 10);
-if (!roomCode) location.href = '/';
+const params = new URLSearchParams(location.search);
+const roomCode = params.get("room") || sessionStorage.getItem("roomCode");
+const playerIndex = parseInt(
+  params.get("player") ?? sessionStorage.getItem("playerIndex") ?? "0",
+  10,
+);
+if (!roomCode) location.href = "/";
 
 // ─── Guide FAB ────────────────────────────────────────────────────────────
-const guideOverlay = document.getElementById('guideOverlay');
-document.getElementById('guideBtn').addEventListener('click', () => guideOverlay.classList.remove('hidden'));
-document.getElementById('guideClose').addEventListener('click', () => guideOverlay.classList.add('hidden'));
-guideOverlay.addEventListener('click', (e) => { if (e.target === guideOverlay) guideOverlay.classList.add('hidden'); });
-
-// ─── Socket Events ────────────────────────────────────────────────────────
-socket.on('connect', () => {
-  console.log('Connected:', socket.id);
-  socket.emit('rejoinRoom', { code: roomCode, playerIndex });
+const guideOverlay = document.getElementById("guideOverlay");
+document
+  .getElementById("guideBtn")
+  .addEventListener("click", () => guideOverlay.classList.remove("hidden"));
+document
+  .getElementById("guideClose")
+  .addEventListener("click", () => guideOverlay.classList.add("hidden"));
+guideOverlay.addEventListener("click", (e) => {
+  if (e.target === guideOverlay) guideOverlay.classList.add("hidden");
 });
 
-socket.on('gameState', (state) => {
+// ─── Socket Events ────────────────────────────────────────────────────────
+socket.on("connect", () => {
+  console.log("Connected:", socket.id);
+  socket.emit("rejoinRoom", { code: roomCode, playerIndex });
+});
+
+socket.on("gameState", (state) => {
   gameState = state;
-  myIndex   = state.myIndex;
+  myIndex = state.myIndex;
   render();
 });
 
-socket.on('actionError', (msg) => showToast('⚠️ ' + msg, true));
+socket.on("actionError", (msg) => showToast("⚠️ " + msg, true));
 
-socket.on('opponentLeft', () => {
-  showToast('Opponent disconnected.', true);
-  setTimeout(() => location.href = '/', 3000);
+socket.on("opponentLeft", () => {
+  showToast("Opponent disconnected.", true);
+  setTimeout(() => (location.href = "/"), 3000);
 });
 
 // ─── Main Render ──────────────────────────────────────────────────────────
@@ -44,19 +53,34 @@ function render() {
   const s = gameState;
 
   // Scores & Round
-  document.getElementById('myVP').textContent  = s.scores[myIndex];
-  document.getElementById('oppVP').textContent = s.scores[1 - myIndex];
-  document.getElementById('roundNum').textContent = s.round;
+  document.getElementById("myVP").textContent = s.scores[myIndex];
+  document.getElementById("oppVP").textContent = s.scores[1 - myIndex];
+  document.getElementById("roundNum").textContent = s.round;
 
   // Initiative & Score block glowing
   const isMyInitiative = s.initiative === myIndex;
-  document.getElementById('myInitiativeBadge').textContent = isMyInitiative ? '1st' : '2nd';
-  document.getElementById('oppInitiativeBadge').textContent = isMyInitiative ? '2nd' : '1st';  
-  document.getElementById('myScoreBlock').classList.toggle('active-turn', s.currentTurn === myIndex && s.phase !== 'roundEnd');
-  document.getElementById('oppScoreBlock').classList.toggle('active-turn', s.currentTurn !== myIndex && s.phase !== 'roundEnd');
-  document.getElementById('oppHandCountBadge').textContent = s.opponentHandCount;
+  document.getElementById("myInitiativeBadge").textContent = isMyInitiative
+    ? "1st"
+    : "2nd";
+  document.getElementById("oppInitiativeBadge").textContent = isMyInitiative
+    ? "2nd"
+    : "1st";
+  document
+    .getElementById("myScoreBlock")
+    .classList.toggle(
+      "active-turn",
+      s.currentTurn === myIndex && s.phase !== "roundEnd",
+    );
+  document
+    .getElementById("oppScoreBlock")
+    .classList.toggle(
+      "active-turn",
+      s.currentTurn !== myIndex && s.phase !== "roundEnd",
+    );
+  document.getElementById("oppHandCountBadge").textContent =
+    s.opponentHandCount;
 
-  const hintEl = document.getElementById('retreatVPHint');
+  const hintEl = document.getElementById("retreatVPHint");
   if (hintEl) {
     const retreatVPMap = { 0: 6, 1: 5, 2: 4, 3: 3, 4: 2, 5: 2, 6: 2 };
     const vpOppScores = retreatVPMap[Math.min(s.opponentHandCount, 6)] || 2;
@@ -64,100 +88,121 @@ function render() {
   }
 
   // Status bar
-  const sb = document.getElementById('statusBar');
-  if (s.phase === 'gameOver') {
-    sb.textContent = '';
+  const sb = document.getElementById("statusBar");
+  if (s.phase === "gameOver") {
+    sb.textContent = "";
     showWinScreen(s.winner === myIndex);
     return;
   }
-  if (s.phase === 'roundEnd') {
+  if (s.phase === "roundEnd") {
     const isMyWin = s.roundSummary && s.roundSummary.winner === myIndex;
-    const color = isMyWin ? '#e0d8c0' : '#ff3838';
-    const text = isMyWin ? 'You won the round! ' : 'Opponent won the round! ';
-    
+    const color = isMyWin ? "#e0d8c0" : "#ff3838";
+    const text = isMyWin ? "You won the round! " : "Opponent won the round! ";
+
     sb.innerHTML = `<span style="color:${color}; font-weight:bold">${text}</span><span style="color:#f1c40f">(${s.roundSummary.reason})</span> <strong style="color:${color}">+${s.roundSummary.points} VP</strong>`;
 
-    document.getElementById('btnFaceDown').classList.add('hidden');
-    document.getElementById('btnWithdraw').classList.add('hidden');
-    const hEl = document.getElementById('retreatVPHint'); if (hEl) hEl.classList.add('hidden');
+    document.getElementById("btnFaceDown").classList.add("hidden");
+    document.getElementById("btnWithdraw").classList.add("hidden");
+    const hEl = document.getElementById("retreatVPHint");
+    if (hEl) hEl.classList.add("hidden");
 
     if (s.readyForNextRound[myIndex]) {
-      document.getElementById('btnRsContinue').classList.add('hidden');
-      document.getElementById('btnRsSurrender').classList.add('hidden');
-      sb.innerHTML += '<br/><i style="opacity:0.8; font-size:0.9em">(Waiting for opponent...)</i>';
+      document.getElementById("btnRsContinue").classList.add("hidden");
+      document.getElementById("btnRsSurrender").classList.add("hidden");
+      sb.innerHTML +=
+        '<br/><i style="opacity:0.8; font-size:0.9em">(Waiting for opponent...)</i>';
     } else {
-      document.getElementById('btnRsContinue').classList.remove('hidden');
-      document.getElementById('btnRsSurrender').classList.remove('hidden');
+      document.getElementById("btnRsContinue").classList.remove("hidden");
+      document.getElementById("btnRsSurrender").classList.remove("hidden");
     }
   } else {
-    document.getElementById('btnRsContinue').classList.add('hidden');
-    document.getElementById('btnRsSurrender').classList.add('hidden');
-    document.getElementById('btnWithdraw').classList.remove('hidden');
-    const hEl = document.getElementById('retreatVPHint'); if (hEl) hEl.classList.remove('hidden');
+    document.getElementById("btnRsContinue").classList.add("hidden");
+    document.getElementById("btnRsSurrender").classList.add("hidden");
+    document.getElementById("btnWithdraw").classList.remove("hidden");
+    const hEl = document.getElementById("retreatVPHint");
+    if (hEl) hEl.classList.remove("hidden");
   }
 
   if (s.pendingAbility) {
-    const isMyAbility = s.pendingAbility.playerIdx === myIndex;
-    const isN5OppFlip = s.pendingAbility.type === 'N5_opp_flip' && !isMyAbility;
-    const isN5Self    = s.pendingAbility.type === 'N5_self_flip' && isMyAbility;
+    const ab = s.pendingAbility;
+    const responderIdx =
+      ab.type === "N5_opp_flip" ? 1 - ab.playerIdx : ab.playerIdx;
+    const iShouldRespond = responderIdx === myIndex;
 
-    // Adjust text for the player who is being forced to flip
-    let displayLabel = s.pendingAbility.label;
-    if (isN5OppFlip) displayLabel = 'LeBlanc: You must flip one of your cards.';
+    // Label to display in the status bar (avoid showing "undefined")
+    let displayLabel = ab.label;
+    if (ab.type === "N5_opp_flip" && iShouldRespond) {
+      displayLabel = "LeBlanc: You must flip one of your cards.";
+    }
+    if (!displayLabel) {
+      displayLabel = iShouldRespond
+        ? abilityTitle(ab.type)
+        : "Opponent resolving ability…";
+    }
 
-    sb.className = 'status-bar pending';
-    sb.textContent = '⚡ ' + displayLabel;
+    sb.className = "status-bar pending";
+    sb.textContent = (iShouldRespond ? "⚡ " : "⏳ ") + displayLabel;
 
-    if (isMyAbility || isN5OppFlip || isN5Self) {
-      openAbilityModal(s.pendingAbility, displayLabel);
+    if (iShouldRespond) {
+      openAbilityModal(ab, displayLabel);
     }
   } else if (s.currentTurn === myIndex) {
-    sb.className = 'status-bar your-turn';
-    sb.textContent = '⚔️ Your turn — select a champion, then click a region.';
+    sb.className = "status-bar your-turn";
+    sb.textContent = "⚔️ Your turn — select a champion, then click a region.";
   } else {
-    sb.className = 'status-bar opp-turn';
-    sb.textContent = '⏳ Waiting for opponent…';
+    sb.className = "status-bar opp-turn";
+    sb.textContent = "⏳ Waiting for opponent…";
   }
 
   renderBoard(s);
   renderHand(s.myHand);
   renderLog(s.log);
 
-  const canAct = s.currentTurn === myIndex && s.phase === 'playing' && !s.pendingAbility;
-  document.getElementById('btnWithdraw').disabled = !canAct;
-  document.getElementById('btnFaceDown').classList.toggle('hidden', !selectedCard || !canAct);
+  const canAct =
+    s.currentTurn === myIndex && s.phase === "playing" && !s.pendingAbility;
+  document.getElementById("btnWithdraw").disabled = !canAct;
+  document
+    .getElementById("btnFaceDown")
+    .classList.toggle("hidden", !selectedCard || !canAct);
 }
 
 // ─── Board ────────────────────────────────────────────────────────────────
 function renderBoard(s) {
-  const board = document.getElementById('board');
-  board.innerHTML = '';
+  const board = document.getElementById("board");
+  board.innerHTML = "";
 
   for (const region of REGIONS) {
-    const col = document.createElement('div');
-    col.className = 'region-col';
-    col.setAttribute('data-region', region);
+    const col = document.createElement("div");
+    col.className = "region-col";
+    col.setAttribute("data-region", region);
 
-    const myStr  = calcStrengthClient(s, region, myIndex);
+    const myStr = calcStrengthClient(s, region, myIndex);
     const oppStr = calcStrengthClient(s, region, 1 - myIndex);
-    const myCards  = s.regions[region][myIndex]      || [];
-    const oppCards = s.regions[region][1 - myIndex]  || [];
+    const myCards = s.regions[region][myIndex] || [];
+    const oppCards = s.regions[region][1 - myIndex] || [];
 
-    let crown = '';
-    if (s.phase === 'roundEnd' && (!s.roundSummary || !s.roundSummary.reason.includes('Retreated'))) {
+    let crown = "";
+    if (
+      s.phase === "roundEnd" &&
+      (!s.roundSummary || !s.roundSummary.reason.includes("Retreated"))
+    ) {
       let rWinner = null;
       if (myStr > oppStr) rWinner = myIndex;
       else if (oppStr > myStr) rWinner = 1 - myIndex;
       else rWinner = s.initiative;
-      
+
       if (rWinner === myIndex) {
         crown = '<span class="region-result-badge win">WON</span>';
       } else {
         crown = '<span class="region-result-badge lose">LOST</span>';
       }
     } else {
-      if (myStr > oppStr) crown = '<span class="control-crown" title="You control this region">👑</span>';
-      if (oppStr > myStr) crown = '<span class="control-crown" style="filter:grayscale(1)" title="Opponent controls this region">👑</span>';
+      if (myStr > oppStr)
+        crown =
+          '<span class="control-crown" title="You control this region">👑</span>';
+      if (oppStr > myStr)
+        crown =
+          '<span class="control-crown" style="filter:grayscale(1)" title="Opponent controls this region">👑</span>';
     }
 
     col.innerHTML = `
@@ -166,12 +211,12 @@ function renderBoard(s) {
           <img src="/image/Icon_${region}.webp" class="region-icon" alt="" onerror="this.style.display='none'">
           <span class="region-name">${region}</span>
         </div>
-        ${crown.includes('region-result-badge') ? crown : ''}
+        ${crown.includes("region-result-badge") ? crown : ""}
         <div class="region-strength-bar">
           <span class="str-value str-my">${myStr}</span>
           <span class="str-sep">:</span>
           <span class="str-value str-opp">${oppStr}</span>
-          ${!crown.includes('region-result-badge') ? crown : ''}
+          ${!crown.includes("region-result-badge") ? crown : ""}
         </div>
       </div>
       <div class="region-body">
@@ -186,44 +231,48 @@ function renderBoard(s) {
     board.appendChild(col);
 
     // Populate cards — wrap in stack container
-    const oppSection = col.querySelector('.opp-side');
+    const oppSection = col.querySelector(".opp-side");
     const oppStack = buildCardStack(oppCards, 1 - myIndex, region, s, true);
     oppSection.appendChild(oppStack);
 
-    const mySection = col.querySelector('.my-side');
+    const mySection = col.querySelector(".my-side");
     const myStack = buildCardStack(myCards, myIndex, region, s, false);
     mySection.appendChild(myStack);
 
     // Click = face-up deploy, right-click = face-down deploy
-    col.addEventListener('click', () => {
+    col.addEventListener("click", () => {
       if (!selectedCard || !canActNow(s)) return;
       deployCard(selectedCard.id, region, deployFaceDown);
     });
-    col.addEventListener('contextmenu', (e) => {
+    col.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       if (!selectedCard || !canActNow(s)) return;
       deployCard(selectedCard.id, region, true);
     });
 
-    if (selectedCard) col.classList.add('droppable-target');
+    if (selectedCard) col.classList.add("droppable-target");
   }
 
-  document.getElementById('deployInstructions').classList.toggle('hidden', !selectedCard);
+  document
+    .getElementById("deployInstructions")
+    .classList.toggle("hidden", !selectedCard);
 }
 
 function canActNow(s) {
-  return s && s.currentTurn === myIndex && s.phase === 'playing' && !s.pendingAbility;
+  return (
+    s && s.currentTurn === myIndex && s.phase === "playing" && !s.pendingAbility
+  );
 }
 
 // ─── Build stacked card pile for one player in one region ─────────────────
 function buildCardStack(cards, playerIdx, region, s, isOpponent = false) {
-  const stack = document.createElement('div');
-  stack.className = 'card-stack' + (isOpponent ? ' stack-up' : '');
+  const stack = document.createElement("div");
+  stack.className = "card-stack" + (isOpponent ? " stack-up" : "");
   // cards[0] = oldest (bottom of pile), cards[last] = newest (uncovered/on top)
   cards.forEach((c, idx) => {
     const isUncovered = idx === cards.length - 1;
     const el = buildBoardCard(c, playerIdx, region, s, isUncovered);
-    el.style.setProperty('--stack-idx', idx);
+    el.style.setProperty("--stack-idx", idx);
     el.style.zIndex = idx + 1;
     stack.appendChild(el);
   });
@@ -232,12 +281,14 @@ function buildCardStack(cards, playerIdx, region, s, isOpponent = false) {
 
 // ─── Build a single board card element ────────────────────────────────────
 function buildBoardCard(c, playerIdx, region, s, isUncovered) {
-  const card = document.createElement('div');
-  card.setAttribute('data-card-id', c.id);
+  const card = document.createElement("div");
+  card.setAttribute("data-card-id", c.id);
 
   if (c.faceUp) {
     const def = getCardDef(c.id);
-    card.className = 'board-card face-up-hoverable' + (playerIdx !== myIndex ? ' opponent-card' : '');
+    card.className =
+      "board-card face-up-hoverable" +
+      (playerIdx !== myIndex ? " opponent-card" : "");
     card.innerHTML = `
       <div class="card-face-top">
         <span class="card-name">${def.champion}</span>
@@ -245,24 +296,26 @@ function buildBoardCard(c, playerIdx, region, s, isUncovered) {
       </div>
       <img src="/image/${c.id}${getImgExt(c.id)}" alt="${def.champion}"
            onerror="this.style.display='none'" />
-      ${def.type !== 'None' ? `<span class="card-type-badge type-${def.type} card-type-corner">${def.type}</span>` : ''}
+      ${def.type !== "None" ? `<span class="card-type-badge type-${def.type} card-type-corner">${def.type}</span>` : ""}
     `;
 
     // Hover → show card info in sidebar
-    card.addEventListener('mouseenter', () => showCardInfo(def));
-    card.addEventListener('mouseleave', hideCardInfo);
-
+    card.addEventListener("mouseenter", () => showCardInfo(def));
+    card.addEventListener("mouseleave", hideCardInfo);
   } else {
-    card.className = 'board-card facedown';
+    card.className = "board-card facedown";
   }
 
   // Flip target highlight
-  if (s.pendingAbility && isFlipTarget(s.pendingAbility, region, playerIdx, myIndex, isUncovered)) {
-    card.classList.add('flip-target');
-    card.style.cursor = 'crosshair';
-    card.addEventListener('click', (e) => {
+  if (
+    s.pendingAbility &&
+    isFlipTarget(s.pendingAbility, region, playerIdx, myIndex, isUncovered)
+  ) {
+    card.classList.add("flip-target");
+    card.style.cursor = "crosshair";
+    card.addEventListener("click", (e) => {
       e.stopPropagation();
-      socket.emit('abilityResponse', {
+      socket.emit("abilityResponse", {
         targetCardId: c.id,
         targetRegion: region,
         targetPlayer: playerIdx,
@@ -275,16 +328,18 @@ function buildBoardCard(c, playerIdx, region, s, isUncovered) {
 
 function isFlipTarget(ab, region, cardPlayer, myIdx, isUncovered) {
   if (!ab) return false;
-  
+
   // All flip abilities only target uncovered cards
   if (!isUncovered) return false;
 
-  if (ab.type === 'flip_any' && ab.playerIdx === myIdx) return true;
-  if (ab.type === 'flip_adjacent' && ab.playerIdx === myIdx) {
+  if (ab.type === "flip_any" && ab.playerIdx === myIdx) return true;
+  if (ab.type === "flip_adjacent" && ab.playerIdx === myIdx) {
     return adjacentTo(ab.playedRegion, region);
   }
-  if (ab.type === 'N5_opp_flip' && ab.playerIdx !== myIdx) return cardPlayer === myIdx;
-  if (ab.type === 'N5_self_flip' && ab.playerIdx === myIdx) return cardPlayer === myIdx;
+  if (ab.type === "N5_opp_flip" && ab.playerIdx !== myIdx)
+    return cardPlayer === myIdx;
+  if (ab.type === "N5_self_flip" && ab.playerIdx === myIdx)
+    return cardPlayer === myIdx;
   return false;
 }
 
@@ -293,8 +348,10 @@ function calcStrengthClient(s, region, playerIdx) {
   const cards = s.regions[region][playerIdx] || [];
   let total = 0;
 
-  const zedActive = REGIONS.some(r => (s.regions[r][playerIdx] || []).some(c => c.faceUp && c.id === 'I2'));
-  const luxRegion = findCardRegion(s, 'D1', playerIdx);
+  const zedActive = REGIONS.some((r) =>
+    (s.regions[r][playerIdx] || []).some((c) => c.faceUp && c.id === "I2"),
+  );
+  const luxRegion = findCardRegion(s, "D1", playerIdx);
 
   for (const c of cards) {
     const def = getCardDef(c.id);
@@ -308,7 +365,10 @@ function calcStrengthClient(s, region, playerIdx) {
 
 function findCardRegion(s, cardId, playerIdx) {
   for (const r of REGIONS) {
-    if ((s.regions[r][playerIdx] || []).some(c => c.id === cardId && c.faceUp)) return r;
+    if (
+      (s.regions[r][playerIdx] || []).some((c) => c.id === cardId && c.faceUp)
+    )
+      return r;
   }
   return null;
 }
@@ -318,14 +378,16 @@ function adjacentTo(r1, r2) {
 
 // ─── Hand ─────────────────────────────────────────────────────────────────
 function renderHand(hand) {
-  const container = document.getElementById('handCards');
-  container.innerHTML = '';
+  const container = document.getElementById("handCards");
+  container.innerHTML = "";
   const canAct = canActNow(gameState);
 
-  for (const card of (hand || [])) {
-    const el = document.createElement('div');
-    el.className = `hand-card region-${card.region}` + (selectedCard?.id === card.id ? ' selected' : '');
-    el.setAttribute('data-id', card.id);
+  for (const card of hand || []) {
+    const el = document.createElement("div");
+    el.className =
+      `hand-card region-${card.region}` +
+      (selectedCard?.id === card.id ? " selected" : "");
+    el.setAttribute("data-id", card.id);
 
     el.innerHTML = `
       <img src="/image/${card.id}${getImgExt(card.id)}" alt="${card.champion}"
@@ -338,11 +400,11 @@ function renderHand(hand) {
     `;
 
     if (canAct) {
-      el.addEventListener('click', () => selectCard(card));
+      el.addEventListener("click", () => selectCard(card));
     }
     // Hover on hand card → show card info in sidebar
-    el.addEventListener('mouseenter', () => showCardInfo(card));
-    el.addEventListener('mouseleave', hideCardInfo);
+    el.addEventListener("mouseenter", () => showCardInfo(card));
+    el.addEventListener("mouseleave", hideCardInfo);
 
     container.appendChild(el);
   }
@@ -352,12 +414,12 @@ function selectCard(card) {
   if (selectedCard?.id === card.id) {
     selectedCard = null;
     deployFaceDown = false;
-    document.getElementById('btnFaceDown').classList.add('hidden');
-    document.getElementById('btnFaceDown').textContent = '🌑 Hidden Deploy';
+    document.getElementById("btnFaceDown").classList.add("hidden");
+    document.getElementById("btnFaceDown").textContent = "🌑 Hidden Deploy";
   } else {
     selectedCard = { id: card.id, cardDef: card };
     deployFaceDown = false;
-    document.getElementById('btnFaceDown').classList.remove('hidden');
+    document.getElementById("btnFaceDown").classList.remove("hidden");
   }
   renderHand(gameState.myHand);
   renderBoard(gameState);
@@ -365,83 +427,93 @@ function selectCard(card) {
 
 // ─── Deploy ────────────────────────────────────────────────────────────────
 function deployCard(cardId, region, faceDown) {
-  socket.emit('playCard', { cardId, regionName: region, faceDown });
+  socket.emit("playCard", { cardId, regionName: region, faceDown });
   selectedCard = null;
   deployFaceDown = false;
-  document.getElementById('btnFaceDown').classList.add('hidden');
-  document.getElementById('btnFaceDown').textContent = '🌑 Hidden Deploy';
+  document.getElementById("btnFaceDown").classList.add("hidden");
+  document.getElementById("btnFaceDown").textContent = "🌑 Hidden Deploy";
   renderHand(gameState?.myHand);
   renderBoard(gameState);
 }
 
-document.getElementById('btnFaceDown').addEventListener('click', () => {
+document.getElementById("btnFaceDown").addEventListener("click", () => {
   if (!selectedCard) return;
   deployFaceDown = !deployFaceDown;
-  document.getElementById('btnFaceDown').textContent =
-    deployFaceDown ? '✅ Hidden ON — Click Region' : '🌑 Hidden Deploy';
+  document.getElementById("btnFaceDown").textContent = deployFaceDown
+    ? "✅ Hidden ON — Click Region"
+    : "🌑 Hidden Deploy";
 });
 
-document.getElementById('btnWithdraw').addEventListener('click', () => {
-  if (!confirm('Retreat from this round? Your opponent will score Victory Points.')) return;
-  socket.emit('withdraw');
+document.getElementById("btnWithdraw").addEventListener("click", () => {
+  if (
+    !confirm(
+      "Retreat from this round? Your opponent will score Victory Points.",
+    )
+  )
+    return;
+  socket.emit("withdraw");
 });
 
 // ─── Card Info Sidebar ─────────────────────────────────────────────────────
 const CHAMPION_LORE = {
-  Katarina: 'A Noxian assassin who moves without mercy, striking between heartbeats.',
+  Katarina:
+    "A Noxian assassin who moves without mercy, striking between heartbeats.",
   Talon: "The Blade's Shadow — silence before the kill.",
-  Darius: 'The Hand of Noxus. He who hesitates is dead.',
-  Swain: 'Grand General of Noxus, master of ravens and dark power.',
-  LeBlanc: 'The Deceiver — every truth is a veil over a deeper lie.',
-  Draven: 'The Glorious Executioner. He turns every battle into a spectacle.',
-  Lux: 'The Lady of Luminosity, wielding light with precision and grace.',
-  Quinn: 'Demacian ranger, soaring with her eagle Valor beyond enemy lines.',
-  Garen: 'The Might of Demacia, spinning steel and unshakeable conviction.',
-  'Jarvan IV': 'Crown Prince of Demacia, fighting in the vanguard of every battle.',
-  Fiora: 'The Grand Duelist, for whom every fight is an elegant art form.',
-  Galio: 'The Colossus, a stone sentinel forged to stand against magic.',
-  Ahri: 'The Nine-Tailed Fox, dancing between worlds with a song of stolen spirits.',
-  Zed: 'Master of Shadows — he and his shadow are never separated.',
-  Shen: 'The Eye of Twilight, balancing the scales between body, mind, and spirit.',
-  Yasuo: 'The Unforgiven, an exile whose blade brings both freedom and ruin.',
-  Irelia: 'The Blade Dancer of Ionia, a storm of floating steel.',
-  'Master Yi': 'The Wuju Bladesman — one hundred enemies, one perfect strike.',
+  Darius: "The Hand of Noxus. He who hesitates is dead.",
+  Swain: "Grand General of Noxus, master of ravens and dark power.",
+  LeBlanc: "The Deceiver — every truth is a veil over a deeper lie.",
+  Draven: "The Glorious Executioner. He turns every battle into a spectacle.",
+  Lux: "The Lady of Luminosity, wielding light with precision and grace.",
+  Quinn: "Demacian ranger, soaring with her eagle Valor beyond enemy lines.",
+  Garen: "The Might of Demacia, spinning steel and unshakeable conviction.",
+  "Jarvan IV":
+    "Crown Prince of Demacia, fighting in the vanguard of every battle.",
+  Fiora: "The Grand Duelist, for whom every fight is an elegant art form.",
+  Galio: "The Colossus, a stone sentinel forged to stand against magic.",
+  Ahri: "The Nine-Tailed Fox, dancing between worlds with a song of stolen spirits.",
+  Zed: "Master of Shadows — he and his shadow are never separated.",
+  Shen: "The Eye of Twilight, balancing the scales between body, mind, and spirit.",
+  Yasuo: "The Unforgiven, an exile whose blade brings both freedom and ruin.",
+  Irelia: "The Blade Dancer of Ionia, a storm of floating steel.",
+  "Master Yi": "The Wuju Bladesman — one hundred enemies, one perfect strike.",
 };
 
 let cardHideTimer = null;
 
 function showCardInfo(def) {
   clearTimeout(cardHideTimer);
-  document.getElementById('cardInfoIdle').classList.add('hidden');
-  document.getElementById('cardInfoDetail').classList.remove('hidden');
+  document.getElementById("cardInfoIdle").classList.add("hidden");
+  document.getElementById("cardInfoDetail").classList.remove("hidden");
 
-  document.getElementById('cidImage').src = `/image/${def.id}${getImgExt(def.id)}`;
-  document.getElementById('cidImage').alt = def.champion;
-  document.getElementById('cidStrength').textContent = `⚔ ${def.strength}`;
-  document.getElementById('cidName').textContent = def.champion;
+  document.getElementById("cidImage").src =
+    `/image/${def.id}${getImgExt(def.id)}`;
+  document.getElementById("cidImage").alt = def.champion;
+  document.getElementById("cidStrength").textContent = `⚔ ${def.strength}`;
+  document.getElementById("cidName").textContent = def.champion;
 
-  const regionBadge = document.getElementById('cidRegionBadge');
+  const regionBadge = document.getElementById("cidRegionBadge");
   regionBadge.textContent = def.region;
   regionBadge.className = `cid-region-badge region-badge-${def.region}`;
 
-  const typeBadge = document.getElementById('cidTypeBadge');
+  const typeBadge = document.getElementById("cidTypeBadge");
   typeBadge.textContent = def.type;
   typeBadge.className = `cid-type-badge type-${def.type}`;
 
-  const abilityBox = document.getElementById('cidAbilityBox');
+  const abilityBox = document.getElementById("cidAbilityBox");
   if (def.ability) {
-    abilityBox.style.display = '';
-    document.getElementById('cidAbility').textContent = def.ability;
+    abilityBox.style.display = "";
+    document.getElementById("cidAbility").textContent = def.ability;
   } else {
-    abilityBox.style.display = 'none';
+    abilityBox.style.display = "none";
   }
-  document.getElementById('cidLore').textContent = CHAMPION_LORE[def.champion] || '';
+  document.getElementById("cidLore").textContent =
+    CHAMPION_LORE[def.champion] || "";
 }
 
 function hideCardInfo() {
   cardHideTimer = setTimeout(() => {
-    document.getElementById('cardInfoIdle').classList.remove('hidden');
-    document.getElementById('cardInfoDetail').classList.add('hidden');
+    document.getElementById("cardInfoIdle").classList.remove("hidden");
+    document.getElementById("cardInfoDetail").classList.add("hidden");
   }, 350);
 }
 
@@ -449,86 +521,120 @@ function hideCardInfo() {
 let lastLogLength = 0;
 
 function renderLog(log) {
-  const container = document.getElementById('logScroll');
+  const container = document.getElementById("logScroll");
   if (!log || log.length === lastLogLength) return;
 
   const newEntries = log.slice(lastLogLength);
   lastLogLength = log.length;
 
   for (const entry of newEntries) {
-    const div = document.createElement('div');
-    div.className = 'log-entry new';
+    const div = document.createElement("div");
+    div.className = "log-entry new";
     div.textContent = entry;
     container.appendChild(div);
-    setTimeout(() => div.classList.remove('new'), 1500);
+    setTimeout(() => div.classList.remove("new"), 1500);
   }
   container.scrollTop = container.scrollHeight;
 }
 
 // ─── Ability Modal ─────────────────────────────────────────────────────────
 function openAbilityModal(ability, customLabel) {
-  const modal  = document.getElementById('abilityModal');
-  const title  = document.getElementById('modalTitle');
-  const desc   = document.getElementById('modalDesc');
-  const opts   = document.getElementById('modalOptions');
-  const footer = document.getElementById('modalFooter');
+  const modal = document.getElementById("abilityModal");
+  const title = document.getElementById("modalTitle");
+  const desc = document.getElementById("modalDesc");
+  const opts = document.getElementById("modalOptions");
+  const footer = document.getElementById("modalFooter");
 
   title.textContent = abilityTitle(ability.type);
-  if (ability.type === 'N5_opp_flip' && customLabel) title.textContent = 'LeBlanc — Flip Required';
+  if (ability.type === "N5_opp_flip" && customLabel)
+    title.textContent = "LeBlanc — Flip Required";
 
-  const baseLabel = customLabel || ability.label || '';
-  desc.textContent  = baseLabel;
-  opts.innerHTML    = '';
-  footer.innerHTML  = '';
+  const baseLabel = customLabel || ability.label || "";
+  desc.textContent = baseLabel;
+  opts.innerHTML = "";
+  footer.innerHTML = "";
 
   switch (ability.type) {
-    case 'N1_peek': {
+    case "N1_peek": {
       const top = ability.topCard;
       desc.textContent = `Top card: ${top.champion} (${top.region}, STR ${top.strength}). Deploy facedown to an adjacent region?`;
-      for (const r of adjacentRegions('Noxus')) {
-        const btn = mkModalOption(r, '📍 ' + r, 'Deploy facedown here');
-        btn.addEventListener('click', () => { socket.emit('abilityResponse', { deploy: true, regionName: r }); closeModal(); });
+      for (const r of adjacentRegions("Noxus")) {
+        const btn = mkModalOption(r, "📍 " + r, "Deploy facedown here");
+        btn.addEventListener("click", () => {
+          socket.emit("abilityResponse", { deploy: true, regionName: r });
+          closeModal();
+        });
         opts.appendChild(btn);
       }
-      footer.appendChild(mkBtn('Skip', 'btn btn-secondary btn-sm', () => { socket.emit('abilityResponse', { deploy: false }); closeModal(); }));
+      footer.appendChild(
+        mkBtn("Skip", "btn btn-secondary btn-sm", () => {
+          socket.emit("abilityResponse", { deploy: false });
+          closeModal();
+        }),
+      );
       break;
     }
-    case 'flip_any':
-    case 'flip_adjacent':
-    case 'N5_opp_flip':
-    case 'N5_self_flip': {
-      desc.textContent = baseLabel + ' Click the highlighted card on the board.';
-      footer.appendChild(mkBtn('Cancel', 'btn btn-secondary btn-sm', closeModal));
+    case "flip_any":
+    case "flip_adjacent":
+    case "N5_opp_flip":
+    case "N5_self_flip": {
+      desc.textContent =
+        baseLabel + " Click the highlighted card on the board.";
+      footer.appendChild(
+        mkBtn("Cancel", "btn btn-secondary btn-sm", closeModal),
+      );
       break;
     }
-    case 'I1_move': {
-      desc.textContent = 'Choose one of your cards to move to a different region.';
-      let step = 'pick'; let pickedCard = null; let pickedFrom = null;
+    case "I1_move": {
+      desc.textContent =
+        "Choose one of your cards to move to a different region.";
+      let step = "pick";
+      let pickedCard = null;
+      let pickedFrom = null;
       for (const r of REGIONS) {
         const myCardsInR = gameState.regions[r][myIndex] || [];
         for (const c of myCardsInR) {
           const def = getCardDef(c.id);
-          const el = mkModalOption(c.id, def.champion, r + (c.faceUp ? ' · STR ' + def.strength : ' · facedown'));
-          el.addEventListener('click', () => {
-            if (step !== 'pick') return;
-            pickedCard = c.id; pickedFrom = r; step = 'dest';
-            opts.innerHTML = '';
+          const el = mkModalOption(
+            c.id,
+            def.champion,
+            r + (c.faceUp ? " · STR " + def.strength : " · facedown"),
+          );
+          el.addEventListener("click", () => {
+            if (step !== "pick") return;
+            pickedCard = c.id;
+            pickedFrom = r;
+            step = "dest";
+            opts.innerHTML = "";
             desc.textContent = `Move ${def.champion} to which region?`;
             for (const dr of REGIONS) {
               if (dr === r) continue;
-              const d = mkModalOption(dr, '📍 ' + dr, 'Move here');
-              d.addEventListener('click', () => { socket.emit('abilityResponse', { cardId: pickedCard, fromRegion: pickedFrom, toRegion: dr }); closeModal(); });
+              const d = mkModalOption(dr, "📍 " + dr, "Move here");
+              d.addEventListener("click", () => {
+                socket.emit("abilityResponse", {
+                  cardId: pickedCard,
+                  fromRegion: pickedFrom,
+                  toRegion: dr,
+                });
+                closeModal();
+              });
               opts.appendChild(d);
             }
           });
           opts.appendChild(el);
         }
       }
-      footer.appendChild(mkBtn('Skip', 'btn btn-secondary btn-sm', () => { socket.emit('abilityResponse', { skip: true }); closeModal(); }));
+      footer.appendChild(
+        mkBtn("Skip", "btn btn-secondary btn-sm", () => {
+          socket.emit("abilityResponse", { skip: true });
+          closeModal();
+        }),
+      );
       break;
     }
-    case 'I4_return': {
-      desc.textContent = 'Return an uncovered facedown card to hand and gain an extra turn, or skip.';
+    case "I4_return": {
+      desc.textContent =
+        "Return an uncovered facedown card to hand and gain an extra turn, or skip.";
       let anyFound = false;
       for (const r of REGIONS) {
         const myCardsInR = gameState.regions[r][myIndex] || [];
@@ -537,50 +643,73 @@ function openAbilityModal(ability, customLabel) {
           if (!c.faceUp) {
             anyFound = true;
             const def = getCardDef(c.id);
-            const el = mkModalOption(c.id, def.champion, r + ' — return for extra turn');
-            el.addEventListener('click', () => { socket.emit('abilityResponse', { cardId: c.id, fromRegion: r }); closeModal(); });
+            const el = mkModalOption(
+              c.id,
+              def.champion,
+              r + " — return for extra turn",
+            );
+            el.addEventListener("click", () => {
+              socket.emit("abilityResponse", { cardId: c.id, fromRegion: r });
+              closeModal();
+            });
             opts.appendChild(el);
           }
         }
       }
-      if (!anyFound) desc.textContent = 'No facedown uncovered cards to return.';
-      footer.appendChild(mkBtn('Skip', 'btn btn-secondary btn-sm', () => { socket.emit('abilityResponse', { skip: true }); closeModal(); }));
+      if (!anyFound)
+        desc.textContent = "No facedown uncovered cards to return.";
+      footer.appendChild(
+        mkBtn("Skip", "btn btn-secondary btn-sm", () => {
+          socket.emit("abilityResponse", { skip: true });
+          closeModal();
+        }),
+      );
       break;
     }
   }
 
-  modal.classList.remove('hidden');
+  modal.classList.remove("hidden");
 }
 
-function closeModal() { document.getElementById('abilityModal').classList.add('hidden'); }
+function closeModal() {
+  document.getElementById("abilityModal").classList.add("hidden");
+}
 
 function abilityTitle(type) {
-  return {
-    N1_peek: 'Katarina — Peek', flip_any: 'Talon — Flip Card',
-    flip_adjacent: 'Flip Adjacent Card', N5_opp_flip: 'LeBlanc — Opponent Flips',
-    N5_self_flip: 'LeBlanc — You Flip', I1_move: 'Ahri — Move Card',
-    I4_return: 'Yasuo — Return Card',
-  }[type] || 'Champion Ability';
+  return (
+    {
+      N1_peek: "Katarina — Peek",
+      flip_any: "Talon — Flip Card",
+      flip_adjacent: "Flip Adjacent Card",
+      N5_opp_flip: "LeBlanc — Opponent Flips",
+      N5_self_flip: "LeBlanc — You Flip",
+      I1_move: "Ahri — Move Card",
+      I4_return: "Yasuo — Return Card",
+    }[type] || "Champion Ability"
+  );
 }
 
 function mkModalOption(id, name, info) {
-  const el = document.createElement('div');
-  el.className = 'modal-option';
+  const el = document.createElement("div");
+  el.className = "modal-option";
   el.innerHTML = `<div><div class="opt-name">${name}</div><div class="opt-info">${info}</div></div>`;
   return el;
 }
 function mkBtn(label, cls, onClick) {
-  const b = document.createElement('button');
-  b.className = cls; b.textContent = label;
-  if (onClick) b.addEventListener('click', onClick);
+  const b = document.createElement("button");
+  b.className = cls;
+  b.textContent = label;
+  if (onClick) b.addEventListener("click", onClick);
   return b;
 }
 
 // ─── Win Screen ────────────────────────────────────────────────────────────
 function showWinScreen(iWon) {
-  const win = document.getElementById('winOverlay');
-  document.getElementById('winTrophy').textContent = iWon ? '🏆' : '💀';
-  document.getElementById('winTitle').textContent  = iWon ? 'Victory!' : 'Defeated!';
+  const win = document.getElementById("winOverlay");
+  document.getElementById("winTrophy").textContent = iWon ? "🏆" : "💀";
+  document.getElementById("winTitle").textContent = iWon
+    ? "Victory!"
+    : "Defeated!";
 
   let desc = iWon
     ? `You conquered the Rift with ${gameState.scores[myIndex]} VP!`
@@ -594,61 +723,226 @@ function showWinScreen(iWon) {
     }
   }
 
-  document.getElementById('winDesc').textContent = desc;
-  win.classList.remove('hidden');
+  document.getElementById("winDesc").textContent = desc;
+  win.classList.remove("hidden");
 }
 
-document.getElementById('btnRsContinue').addEventListener('click', () => {
-  if (gameState && gameState.phase === 'roundEnd') socket.emit('readyForNextRound');
+document.getElementById("btnRsContinue").addEventListener("click", () => {
+  if (gameState && gameState.phase === "roundEnd")
+    socket.emit("readyForNextRound");
 });
-document.getElementById('btnRsSurrender').addEventListener('click', () => {
-  if (confirm('Are you sure you want to surrender the entire game? You will lose ELO!')) {
-    socket.emit('surrenderMatch');
+document.getElementById("btnRsSurrender").addEventListener("click", () => {
+  if (
+    confirm(
+      "Are you sure you want to surrender the entire game? You will lose ELO!",
+    )
+  ) {
+    socket.emit("surrenderMatch");
   }
 });
 
 // ─── Toast ─────────────────────────────────────────────────────────────────
 function showToast(msg, isError = false) {
-  const old = document.querySelector('.toast');
+  const old = document.querySelector(".toast");
   if (old) old.remove();
-  const t = document.createElement('div');
-  t.className = 'toast';
+  const t = document.createElement("div");
+  t.className = "toast";
   t.textContent = msg;
-  if (isError) t.style.borderColor = 'rgba(231,76,60,0.6)';
+  if (isError) t.style.borderColor = "rgba(231,76,60,0.6)";
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3100);
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 const CARD_DEFS = {
-  N1:{id:'N1',region:'Noxus',strength:1,champion:'Katarina',type:'Instant',ability:'Look at the top card of the deck. You may play it facedown to an adjacent region.'},
-  N2:{id:'N2',region:'Noxus',strength:2,champion:'Talon',type:'Instant',ability:'Flip a card in any region.'},
-  N3:{id:'N3',region:'Noxus',strength:3,champion:'Darius',type:'Instant',ability:'Flip a card in an adjacent region.'},
-  N4:{id:'N4',region:'Noxus',strength:4,champion:'Swain',type:'Ongoing',ability:'All cards covered by this card are now strength 4.'},
-  N5:{id:'N5',region:'Noxus',strength:5,champion:'LeBlanc',type:'Instant',ability:'Your opponent chooses and flips 1 of their cards. Then you flip 1 of yours.'},
-  N6:{id:'N6',region:'Noxus',strength:6,champion:'Draven',type:'None',ability:null},
-  D1:{id:'D1',region:'Demacia',strength:1,champion:'Lux',type:'Ongoing',ability:'You gain +3 strength in each adjacent region.'},
-  D2:{id:'D2',region:'Demacia',strength:2,champion:'Quinn',type:'Instant',ability:'On your next turn, you may play a card to a non-matching region.'},
-  D3:{id:'D3',region:'Demacia',strength:3,champion:'Garen',type:'Instant',ability:'Flip a card in an adjacent region.'},
-  D4:{id:'D4',region:'Demacia',strength:4,champion:'Jarvan IV',type:'Ongoing',ability:'You may play cards of strength 3 or less to non-matching regions.'},
-  D5:{id:'D5',region:'Demacia',strength:5,champion:'Fiora',type:'Ongoing',ability:'If either player plays a facedown card, discard that card with no effect.'},
-  D6:{id:'D6',region:'Demacia',strength:6,champion:'Galio',type:'None',ability:null},
-  I1:{id:'I1',region:'Ionia',strength:1,champion:'Ahri',type:'Instant',ability:'You may move 1 of your cards to a different region.'},
-  I2:{id:'I2',region:'Ionia',strength:2,champion:'Zed',type:'Ongoing',ability:'All of your facedown cards are now strength 4.'},
-  I3:{id:'I3',region:'Ionia',strength:3,champion:'Shen',type:'Instant',ability:'Flip a card in an adjacent region.'},
-  I4:{id:'I4',region:'Ionia',strength:4,champion:'Yasuo',type:'Instant',ability:'Return 1 of your facedown cards to your hand. If you do, gain an extra turn.'},
-  I5:{id:'I5',region:'Ionia',strength:5,champion:'Irelia',type:'Ongoing',ability:'If a card is played to an adjacent region with 3+ cards already, discard it.'},
-  I6:{id:'I6',region:'Ionia',strength:6,champion:'Master Yi',type:'None',ability:null},
+  N1: {
+    id: "N1",
+    region: "Noxus",
+    strength: 1,
+    champion: "Katarina",
+    type: "Instant",
+    ability:
+      "Look at the top card of the deck. You may play it facedown to an adjacent region.",
+  },
+  N2: {
+    id: "N2",
+    region: "Noxus",
+    strength: 2,
+    champion: "Talon",
+    type: "Instant",
+    ability: "Flip a card in any region.",
+  },
+  N3: {
+    id: "N3",
+    region: "Noxus",
+    strength: 3,
+    champion: "Darius",
+    type: "Instant",
+    ability: "Flip a card in an adjacent region.",
+  },
+  N4: {
+    id: "N4",
+    region: "Noxus",
+    strength: 4,
+    champion: "Swain",
+    type: "Ongoing",
+    ability: "All cards covered by this card are now strength 4.",
+  },
+  N5: {
+    id: "N5",
+    region: "Noxus",
+    strength: 5,
+    champion: "LeBlanc",
+    type: "Instant",
+    ability:
+      "Your opponent chooses and flips 1 of their cards. Then you flip 1 of yours.",
+  },
+  N6: {
+    id: "N6",
+    region: "Noxus",
+    strength: 6,
+    champion: "Draven",
+    type: "None",
+    ability: null,
+  },
+  D1: {
+    id: "D1",
+    region: "Demacia",
+    strength: 1,
+    champion: "Lux",
+    type: "Ongoing",
+    ability: "You gain +3 strength in each adjacent region.",
+  },
+  D2: {
+    id: "D2",
+    region: "Demacia",
+    strength: 2,
+    champion: "Quinn",
+    type: "Instant",
+    ability: "On your next turn, you may play a card to a non-matching region.",
+  },
+  D3: {
+    id: "D3",
+    region: "Demacia",
+    strength: 3,
+    champion: "Garen",
+    type: "Instant",
+    ability: "Flip a card in an adjacent region.",
+  },
+  D4: {
+    id: "D4",
+    region: "Demacia",
+    strength: 4,
+    champion: "Jarvan IV",
+    type: "Ongoing",
+    ability:
+      "You may play cards of strength 3 or less to non-matching regions.",
+  },
+  D5: {
+    id: "D5",
+    region: "Demacia",
+    strength: 5,
+    champion: "Fiora",
+    type: "Ongoing",
+    ability:
+      "If either player plays a facedown card, discard that card with no effect.",
+  },
+  D6: {
+    id: "D6",
+    region: "Demacia",
+    strength: 6,
+    champion: "Galio",
+    type: "None",
+    ability: null,
+  },
+  I1: {
+    id: "I1",
+    region: "Ionia",
+    strength: 1,
+    champion: "Ahri",
+    type: "Instant",
+    ability: "You may move 1 of your cards to a different region.",
+  },
+  I2: {
+    id: "I2",
+    region: "Ionia",
+    strength: 2,
+    champion: "Zed",
+    type: "Ongoing",
+    ability: "All of your facedown cards are now strength 4.",
+  },
+  I3: {
+    id: "I3",
+    region: "Ionia",
+    strength: 3,
+    champion: "Shen",
+    type: "Instant",
+    ability: "Flip a card in an adjacent region.",
+  },
+  I4: {
+    id: "I4",
+    region: "Ionia",
+    strength: 4,
+    champion: "Yasuo",
+    type: "Instant",
+    ability:
+      "Return 1 of your facedown cards to your hand. If you do, gain an extra turn.",
+  },
+  I5: {
+    id: "I5",
+    region: "Ionia",
+    strength: 5,
+    champion: "Irelia",
+    type: "Ongoing",
+    ability:
+      "If a card is played to an adjacent region with 3+ cards already, discard it.",
+  },
+  I6: {
+    id: "I6",
+    region: "Ionia",
+    strength: 6,
+    champion: "Master Yi",
+    type: "None",
+    ability: null,
+  },
 };
 
-function getCardDef(id) { return CARD_DEFS[id] || { id, champion: id, region: '', strength: 0, type: 'None', ability: null }; }
+function getCardDef(id) {
+  return (
+    CARD_DEFS[id] || {
+      id,
+      champion: id,
+      region: "",
+      strength: 0,
+      type: "None",
+      ability: null,
+    }
+  );
+}
 
 const IMG_EXT = {
-  N1:'jpg',N2:'png',N3:'png',N4:'png',N5:'png',N6:'jpg',
-  D1:'jpg',D2:'png',D3:'jpg',D4:'png',D5:'jpg',D6:'png',
-  I1:'png',I2:'jpg',I3:'jpg',I4:'jpg',I5:'png',I6:'png',
+  N1: "jpg",
+  N2: "png",
+  N3: "png",
+  N4: "png",
+  N5: "png",
+  N6: "jpg",
+  D1: "jpg",
+  D2: "png",
+  D3: "jpg",
+  D4: "png",
+  D5: "jpg",
+  D6: "png",
+  I1: "png",
+  I2: "jpg",
+  I3: "jpg",
+  I4: "jpg",
+  I5: "png",
+  I6: "png",
 };
-function getImgExt(id) { return '.' + (IMG_EXT[id] || 'png'); }
+function getImgExt(id) {
+  return "." + (IMG_EXT[id] || "png");
+}
 
 function adjacentRegions(r) {
   const i = REGIONS.indexOf(r);
