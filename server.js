@@ -1,38 +1,170 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const path = require('path');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/image', express.static(path.join(__dirname, 'image')));
+app.use(express.static(path.join(__dirname, "public")));
+app.use("/image", express.static(path.join(__dirname, "image")));
 
 // ─── Card Data ─────────────────────────────────────────────────────────────
 const CARDS = [
-  { id: 'N1', region: 'Noxus',   strength: 1, champion: 'Katarina',  type: 'Instant',  ability: 'Look at the top card of the deck. You may play it facedown to an adjacent region.' },
-  { id: 'N2', region: 'Noxus',   strength: 2, champion: 'Talon',     type: 'Instant',  ability: 'Flip a card in any region.' },
-  { id: 'N3', region: 'Noxus',   strength: 3, champion: 'Darius',    type: 'Instant',  ability: 'Flip a card in an adjacent region.' },
-  { id: 'N4', region: 'Noxus',   strength: 4, champion: 'Swain',     type: 'Ongoing',  ability: 'All cards covered by this card are now strength 4.' },
-  { id: 'N5', region: 'Noxus',   strength: 5, champion: 'LeBlanc',   type: 'Instant',  ability: 'Your opponent chooses and flips 1 of their cards. Then you flip 1 of yours.' },
-  { id: 'N6', region: 'Noxus',   strength: 6, champion: 'Draven',    type: 'None',     ability: null },
-  { id: 'D1', region: 'Demacia', strength: 1, champion: 'Lux',       type: 'Ongoing',  ability: 'You gain +3 strength in each adjacent region.' },
-  { id: 'D2', region: 'Demacia', strength: 2, champion: 'Quinn',     type: 'Instant',  ability: 'On your next turn, you may play a card to a non-matching region.' },
-  { id: 'D3', region: 'Demacia', strength: 3, champion: 'Garen',     type: 'Instant',  ability: 'Flip a card in an adjacent region.' },
-  { id: 'D4', region: 'Demacia', strength: 4, champion: 'Jarvan IV', type: 'Ongoing',  ability: 'You may play cards of strength 3 or less to non-matching regions.' },
-  { id: 'D5', region: 'Demacia', strength: 5, champion: 'Fiora',     type: 'Ongoing',  ability: 'If either player plays a facedown card, discard that card with no effect.' },
-  { id: 'D6', region: 'Demacia', strength: 6, champion: 'Galio',     type: 'None',     ability: null },
-  { id: 'I1', region: 'Ionia',   strength: 1, champion: 'Ahri',      type: 'Instant',  ability: 'You may move 1 of your cards to a different region.' },
-  { id: 'I2', region: 'Ionia',   strength: 2, champion: 'Zed',       type: 'Ongoing',  ability: 'All of your facedown cards are now strength 4.' },
-  { id: 'I3', region: 'Ionia',   strength: 3, champion: 'Shen',      type: 'Instant',  ability: 'Flip a card in an adjacent region.' },
-  { id: 'I4', region: 'Ionia',   strength: 4, champion: 'Yasuo',     type: 'Instant',  ability: 'Return 1 of your facedown cards to your hand. If you do, gain an extra turn.' },
-  { id: 'I5', region: 'Ionia',   strength: 5, champion: 'Irelia',    type: 'Ongoing',  ability: 'If a card is played to an adjacent region with 3+ cards already, discard it.' },
-  { id: 'I6', region: 'Ionia',   strength: 6, champion: 'Master Yi', type: 'None',     ability: null },
+  {
+    id: "N1",
+    region: "Noxus",
+    strength: 1,
+    champion: "Katarina",
+    type: "Instant",
+    ability:
+      "Look at the top card of the deck. You may play it facedown to an adjacent region.",
+  },
+  {
+    id: "N2",
+    region: "Noxus",
+    strength: 2,
+    champion: "Talon",
+    type: "Instant",
+    ability: "Flip a card in any region.",
+  },
+  {
+    id: "N3",
+    region: "Noxus",
+    strength: 3,
+    champion: "Darius",
+    type: "Instant",
+    ability: "Flip a card in an adjacent region.",
+  },
+  {
+    id: "N4",
+    region: "Noxus",
+    strength: 4,
+    champion: "Swain",
+    type: "Ongoing",
+    ability: "All cards covered by this card are now strength 4.",
+  },
+  {
+    id: "N5",
+    region: "Noxus",
+    strength: 5,
+    champion: "LeBlanc",
+    type: "Instant",
+    ability:
+      "Your opponent chooses and flips 1 of their cards. Then you flip 1 of yours.",
+  },
+  {
+    id: "N6",
+    region: "Noxus",
+    strength: 6,
+    champion: "Draven",
+    type: "None",
+    ability: null,
+  },
+  {
+    id: "D1",
+    region: "Demacia",
+    strength: 1,
+    champion: "Lux",
+    type: "Ongoing",
+    ability: "You gain +3 strength in each adjacent region.",
+  },
+  {
+    id: "D2",
+    region: "Demacia",
+    strength: 2,
+    champion: "Quinn",
+    type: "Instant",
+    ability: "On your next turn, you may play a card to a non-matching region.",
+  },
+  {
+    id: "D3",
+    region: "Demacia",
+    strength: 3,
+    champion: "Garen",
+    type: "Instant",
+    ability: "Flip a card in an adjacent region.",
+  },
+  {
+    id: "D4",
+    region: "Demacia",
+    strength: 4,
+    champion: "Jarvan IV",
+    type: "Ongoing",
+    ability:
+      "You may play cards of strength 3 or less to non-matching regions.",
+  },
+  {
+    id: "D5",
+    region: "Demacia",
+    strength: 5,
+    champion: "Fiora",
+    type: "Ongoing",
+    ability:
+      "If either player plays a facedown card, discard that card with no effect.",
+  },
+  {
+    id: "D6",
+    region: "Demacia",
+    strength: 6,
+    champion: "Galio",
+    type: "None",
+    ability: null,
+  },
+  {
+    id: "I1",
+    region: "Ionia",
+    strength: 1,
+    champion: "Ahri",
+    type: "Instant",
+    ability: "You may move 1 of your cards to a different region.",
+  },
+  {
+    id: "I2",
+    region: "Ionia",
+    strength: 2,
+    champion: "Zed",
+    type: "Ongoing",
+    ability: "All of your facedown cards are now strength 4.",
+  },
+  {
+    id: "I3",
+    region: "Ionia",
+    strength: 3,
+    champion: "Shen",
+    type: "Instant",
+    ability: "Flip a card in an adjacent region.",
+  },
+  {
+    id: "I4",
+    region: "Ionia",
+    strength: 4,
+    champion: "Yasuo",
+    type: "Instant",
+    ability:
+      "Return 1 of your facedown cards to your hand. If you do, gain an extra turn.",
+  },
+  {
+    id: "I5",
+    region: "Ionia",
+    strength: 5,
+    champion: "Irelia",
+    type: "Ongoing",
+    ability:
+      "If a card is played to an adjacent region with 3+ cards already, discard it.",
+  },
+  {
+    id: "I6",
+    region: "Ionia",
+    strength: 6,
+    champion: "Master Yi",
+    type: "None",
+    ability: null,
+  },
 ];
 
-const REGIONS = ['Noxus', 'Demacia', 'Ionia'];
+const REGIONS = ["Noxus", "Demacia", "Ionia"];
 const WITHDRAWAL_SCORE = { 0: 6, 1: 5, 2: 4, 3: 3, 4: 2, 5: 2, 6: 2 };
 
 // ─── Utility ────────────────────────────────────────────────────────────────
@@ -50,26 +182,27 @@ function generateCode() {
 }
 
 function getCardById(id) {
-  return CARDS.find(c => c.id === id);
+  return CARDS.find((c) => c.id === id);
 }
 
 // ─── Room State Factory ─────────────────────────────────────────────────────
 function createGameState(initiative = 0) {
   return {
-    phase: 'playing',          // 'playing' | 'roundEnd' | 'gameOver'
+    phase: "playing", // 'playing' | 'roundEnd' | 'gameOver'
     round: 0,
-    currentTurn: initiative,            // 0 or 1 (index of player whose turn it is)
-    initiative: initiative,             // who goes first next round
+    currentTurn: initiative, // 0 or 1 (index of player whose turn it is)
+    initiative: initiative, // who goes first next round
     scores: [0, 0],
-    deck: [],                      
-    hands: [[], []],     
+    deck: [],
+    hands: [[], []],
     withdrawn: [false, false],
-    extraTurn: [false, false],  // Yasuo effect
-    quinnEffect: [false, false],// Quinn effect
-    regions: {                 // 'Noxus', 'Demacia', 'Ionia'
-      Noxus:   { 0: [], 1: [] },
+    extraTurn: [false, false], // Yasuo effect
+    quinnEffect: [false, false], // Quinn effect
+    regions: {
+      // 'Noxus', 'Demacia', 'Ionia'
+      Noxus: { 0: [], 1: [] },
       Demacia: { 0: [], 1: [] },
-      Ionia:   { 0: [], 1: [] },
+      Ionia: { 0: [], 1: [] },
     },
     log: [],
     // Pending ability state (for multi-step abilities)
@@ -97,8 +230,13 @@ function calcStrength(state, regionName, playerIdx) {
   for (const r of REGIONS) {
     for (const p of [0, 1]) {
       for (const c of state.regions[r][p]) {
-        if (c.faceUp && getCardById(c.id).type === 'Ongoing') {
-          if (!allOngoing[c.id]) allOngoing[c.id] = { card: getCardById(c.id), player: p, region: r };
+        if (c.faceUp && getCardById(c.id).type === "Ongoing") {
+          if (!allOngoing[c.id])
+            allOngoing[c.id] = {
+              card: getCardById(c.id),
+              player: p,
+              region: r,
+            };
         }
       }
     }
@@ -110,7 +248,9 @@ function calcStrength(state, regionName, playerIdx) {
     let str = c.faceUp ? cardDef.strength : 2;
 
     // I2 Zed: all my facedown cards become strength 4
-    const zedActive = Object.values(allOngoing).some(o => o.card.id === 'I2' && o.player === playerIdx);
+    const zedActive = Object.values(allOngoing).some(
+      (o) => o.card.id === "I2" && o.player === playerIdx,
+    );
     if (!c.faceUp && zedActive) str = 4;
 
     // N4 Swain: cards under Swain become strength 4
@@ -121,7 +261,9 @@ function calcStrength(state, regionName, playerIdx) {
   }
 
   // D1 Lux: +3 in each adjacent region where Lux belongs to playerIdx
-  const luxActive = Object.values(allOngoing).find(o => o.card.id === 'D1' && o.player === playerIdx);
+  const luxActive = Object.values(allOngoing).find(
+    (o) => o.card.id === "D1" && o.player === playerIdx,
+  );
   if (luxActive) {
     const luxAdj = adjacentRegions(luxActive.region);
     if (luxAdj.includes(regionName)) total += 3;
@@ -144,16 +286,29 @@ function resolveRegions(state) {
 }
 
 function hasAnyCards(state, playerIdx) {
-  return Object.values(state.regions).some(r => r[playerIdx].length > 0) || state.hands[playerIdx].length > 0;
+  return (
+    Object.values(state.regions).some((r) => r[playerIdx].length > 0) ||
+    state.hands[playerIdx].length > 0
+  );
 }
 
 // ─── Ability Resolution ─────────────────────────────────────────────────────
 
-function handleCardFlippedFaceUp(state, targetCard, targetRegion, targetPlayer) {
+function handleCardFlippedFaceUp(
+  state,
+  targetCard,
+  targetRegion,
+  targetPlayer,
+) {
   const cardDef = getCardById(targetCard.id);
-  if (cardDef.type === 'Instant') {
+  if (cardDef.type === "Instant") {
     state.log.push(`⚡ ${cardDef.champion}'s Instant ability triggered!`);
-    const result = applyInstantAbility(state, targetCard.id, targetPlayer, targetRegion);
+    const result = applyInstantAbility(
+      state,
+      targetCard.id,
+      targetPlayer,
+      targetRegion,
+    );
     if (result.pendingAbility) {
       state.abilityQueue.push(result.pendingAbility);
     }
@@ -173,62 +328,119 @@ function hasValidFlipTargets(state, regionNames, playerIndices) {
 // client needs to respond with more info before turn ends.
 function applyInstantAbility(state, cardId, playerIdx, playedRegion) {
   const card = getCardById(cardId);
-  if (!card || card.type !== 'Instant') return { state, pendingAbility: null };
+  if (!card || card.type !== "Instant") return { state, pendingAbility: null };
 
   switch (cardId) {
-    case 'N1': // Katarina — show top card, optionally deploy facedown to adjacent
+    case "N1": // Katarina — show top card, optionally deploy facedown to adjacent
       if (state.deck.length > 0) {
-        return { state, pendingAbility: { type: 'N1_peek', playerIdx, topCard: state.deck[0] } };
+        return {
+          state,
+          pendingAbility: {
+            type: "N1_peek",
+            playerIdx,
+            topCard: state.deck[0],
+          },
+        };
       }
       break;
 
-    case 'N2': // Talon — flip any card on the board
+    case "N2": // Talon — flip any card on the board
       if (hasValidFlipTargets(state, REGIONS, [0, 1])) {
-        return { state, pendingAbility: { type: 'flip_any', playerIdx, label: 'Talon: Flip any card on the board.' } };
+        return {
+          state,
+          pendingAbility: {
+            type: "flip_any",
+            playerIdx,
+            label: "Talon: Flip any card on the board.",
+          },
+        };
       }
       state.log.push(`Talon: No valid cards to flip.`);
       break;
 
-    case 'N3': // Darius — flip a card in an adjacent region
-    case 'D3': // Garen — same
-    case 'I3': // Shen  — same
+    case "N3": // Darius — flip a card in an adjacent region
+    case "D3": // Garen — same
+    case "I3": // Shen  — same
       const adj = adjacentRegions(playedRegion);
       if (hasValidFlipTargets(state, adj, [0, 1])) {
-        return { state, pendingAbility: { type: 'flip_adjacent', playerIdx, sourceCard: cardId, playedRegion, label: `${card.champion}: Flip a card in an adjacent region.` } };
+        return {
+          state,
+          pendingAbility: {
+            type: "flip_adjacent",
+            playerIdx,
+            sourceCard: cardId,
+            playedRegion,
+            label: `${card.champion}: Flip a card in an adjacent region.`,
+          },
+        };
       }
-      state.log.push(`${card.champion}: No valid cards in adjacent regions to flip.`);
+      state.log.push(
+        `${card.champion}: No valid cards in adjacent regions to flip.`,
+      );
       break;
 
-    case 'N5': // LeBlanc — opponent flips one of theirs, then you flip one of yours
+    case "N5": // LeBlanc — opponent flips one of theirs, then you flip one of yours
       const oppId = 1 - playerIdx;
       if (hasValidFlipTargets(state, REGIONS, [oppId])) {
-        return { state, pendingAbility: { type: 'N5_opp_flip', playerIdx, label: 'LeBlanc: Opponent must flip one of their cards.' } };
+        return {
+          state,
+          pendingAbility: {
+            type: "N5_opp_flip",
+            playerIdx,
+            label: "LeBlanc: Opponent must flip one of their cards.",
+          },
+        };
       } else if (hasValidFlipTargets(state, REGIONS, [playerIdx])) {
         state.log.push(`LeBlanc: Opponent has no cards to flip.`);
-        return { state, pendingAbility: { type: 'N5_self_flip', playerIdx, label: 'LeBlanc: Now flip one of your own cards.' } };
+        return {
+          state,
+          pendingAbility: {
+            type: "N5_self_flip",
+            playerIdx,
+            label: "LeBlanc: Now flip one of your own cards.",
+          },
+        };
       }
       state.log.push(`LeBlanc: No valid cards to flip for either player.`);
       break;
 
-    case 'D2': // Quinn — next turn deploy to non-matching
+    case "D2": // Quinn — next turn deploy to non-matching
       state.quinnEffect[playerIdx] = true;
-      state.log.push(`Quinn: ${playerIdx === 0 ? 'You' : 'Opponent'} may play a card to a non-matching region next turn.`);
+      state.log.push(
+        `Quinn: ${playerIdx === 0 ? "You" : "Opponent"} may play a card to a non-matching region next turn.`,
+      );
       break;
 
-    case 'I1': // Ahri — move one of your cards to a different region
-      if (hasValidFlipTargets(state, REGIONS, [playerIdx])) { // Need at least 1 card to move
-        return { state, pendingAbility: { type: 'I1_move', playerIdx, label: 'Ahri: Move one of your cards to a different region.' } };
+    case "I1": // Ahri — move one of your cards to a different region
+      if (hasValidFlipTargets(state, REGIONS, [playerIdx])) {
+        // Need at least 1 card to move
+        return {
+          state,
+          pendingAbility: {
+            type: "I1_move",
+            playerIdx,
+            label: "Ahri: Move one of your cards to a different region.",
+          },
+        };
       }
       state.log.push(`Ahri: No cards to move.`);
       break;
 
-    case 'I4': // Yasuo — return a facedown card to hand, gain extra turn
-      const hasFacedown = REGIONS.some(r => {
+    case "I4": // Yasuo — return a facedown card to hand, gain extra turn
+      const hasFacedown = REGIONS.some((r) => {
         const pCards = state.regions[r][playerIdx];
         return pCards.length > 0 && !pCards[pCards.length - 1].faceUp;
       });
       if (hasFacedown) {
-        return { state, pendingAbility: { type: 'I4_return', playerIdx, label: 'Yasuo: Return a facedown card to your hand for an extra turn (or skip).' } };
+        return {
+          state,
+          pendingAbility: {
+            type: "I4_return",
+            playerIdx,
+            label:
+              "Yasuo: Return a facedown card to your hand for an extra turn (or skip).",
+          },
+        };
       }
       state.log.push(`Yasuo: No uncovered facedown cards to return.`);
       break;
@@ -248,7 +460,11 @@ function startNewRound(state) {
   state.hands[0] = deck.splice(0, 6);
   state.hands[1] = deck.splice(0, 6);
   state.deck = deck;
-  state.regions = { Noxus: { 0: [], 1: [] }, Demacia: { 0: [], 1: [] }, Ionia: { 0: [], 1: [] } };
+  state.regions = {
+    Noxus: { 0: [], 1: [] },
+    Demacia: { 0: [], 1: [] },
+    Ionia: { 0: [], 1: [] },
+  };
   state.withdrawn = [false, false];
   state.extraTurn = [false, false];
   state.quinnEffect = [false, false];
@@ -256,8 +472,10 @@ function startNewRound(state) {
   state.abilityQueue = [];
   state.currentTurn = state.initiative;
   state.round++;
-  state.phase = 'playing';
-  state.log.push(`--- Round ${state.round} begins. Player ${state.initiative + 1} has initiative ---`);
+  state.phase = "playing";
+  state.log.push(
+    `--- Round ${state.round} begins. Player ${state.initiative + 1} has initiative ---`,
+  );
   return state;
 }
 
@@ -296,29 +514,44 @@ function broadcastState(code) {
     // Don't send full hands array with opponent cards
     delete view.hands;
 
-    io.to(sid).emit('gameState', view);
+    // Never broadcast the deck order or internal ability queue
+    delete view.deck;
+    delete view.abilityQueue;
+
+    // Redact secret ability payloads for the non-owning player (e.g., Katarina peek)
+    if (view.pendingAbility) {
+      view.pendingAbility = { ...view.pendingAbility };
+      if (
+        view.pendingAbility.type === "N1_peek" &&
+        view.pendingAbility.playerIdx !== i
+      ) {
+        delete view.pendingAbility.topCard;
+      }
+    }
+
+    io.to(sid).emit("gameState", view);
   }
 }
 
 // ─── Socket Events ───────────────────────────────────────────────────────────
-io.on('connection', (socket) => {
-  console.log('Connected:', socket.id);
+io.on("connection", (socket) => {
+  console.log("Connected:", socket.id);
 
   // HOST
-  socket.on('hostRoom', () => {
+  socket.on("hostRoom", () => {
     let code = generateCode();
     while (rooms[code]) code = generateCode();
     rooms[code] = { players: [socket.id, null], state: null };
     socket.join(code);
-    socket.emit('roomCreated', { code });
+    socket.emit("roomCreated", { code });
     console.log(`Room ${code} created by ${socket.id}`);
   });
 
   // JOIN
-  socket.on('joinRoom', ({ code }) => {
+  socket.on("joinRoom", ({ code }) => {
     const room = rooms[code];
-    if (!room) return socket.emit('joinError', 'Room not found.');
-    if (room.players[1]) return socket.emit('joinError', 'Room is full.');
+    if (!room) return socket.emit("joinError", "Room not found.");
+    if (room.players[1]) return socket.emit("joinError", "Room is full.");
 
     room.players[1] = socket.id;
     socket.join(code);
@@ -328,51 +561,58 @@ io.on('connection', (socket) => {
     room.state = createGameState(startingInitiative);
     startNewRound(room.state);
 
-    io.to(code).emit('gameStarted', { code });
+    io.to(code).emit("gameStarted", { code });
     broadcastState(code);
     console.log(`Room ${code} — game started`);
   });
 
   // PLAY CARD
-  socket.on('playCard', ({ cardId, regionName, faceDown }) => {
+  socket.on("playCard", ({ cardId, regionName, faceDown }) => {
     const found = getRoomOfSocket(socket.id);
     if (!found) return;
     const { code, room } = found;
     const state = room.state;
     const pIdx = playerIndexOf(room, socket.id);
 
-    if (state.phase !== 'playing') return;
-    if (state.currentTurn !== pIdx) return socket.emit('actionError', 'Not your turn.');
-    if (state.withdrawn[pIdx]) return socket.emit('actionError', 'You have already withdrawn.');
-    if (state.pendingAbility) return socket.emit('actionError', 'Resolve pending ability first.');
+    if (state.phase !== "playing") return;
+    if (state.currentTurn !== pIdx)
+      return socket.emit("actionError", "Not your turn.");
+    if (state.withdrawn[pIdx])
+      return socket.emit("actionError", "You have already withdrawn.");
+    if (state.pendingAbility)
+      return socket.emit("actionError", "Resolve pending ability first.");
 
     const cardDef = getCardById(cardId);
-    if (!cardDef) return socket.emit('actionError', 'Invalid card.');
+    if (!cardDef) return socket.emit("actionError", "Invalid card.");
 
     // Check card is in hand
-    const handIdx = state.hands[pIdx].findIndex(c => c.id === cardId);
-    if (handIdx === -1) return socket.emit('actionError', 'Card not in hand.');
+    const handIdx = state.hands[pIdx].findIndex((c) => c.id === cardId);
+    if (handIdx === -1) return socket.emit("actionError", "Card not in hand.");
 
     // Validate region rules
     if (faceDown) {
       // Face-down allowed anywhere
     } else {
       // Face-up must go to matching region unless Quinn or Jarvan IV effect
-      const jarvanActive = Object.values(state.regions).some(r =>
-        r[pIdx].some(c => c.faceUp && c.id === 'D4')
+      const jarvanActive = Object.values(state.regions).some((r) =>
+        r[pIdx].some((c) => c.faceUp && c.id === "D4"),
       );
-      const canPlayAnywhere = state.quinnEffect[pIdx] ||
-        (jarvanActive && cardDef.strength <= 3);
+      const canPlayAnywhere =
+        state.quinnEffect[pIdx] || (jarvanActive && cardDef.strength <= 3);
 
       if (cardDef.region !== regionName && !canPlayAnywhere) {
-        return socket.emit('actionError', `${cardDef.champion} must be played to ${cardDef.region} face-up.`);
+        return socket.emit(
+          "actionError",
+          `${cardDef.champion} must be played to ${cardDef.region} face-up.`,
+        );
       }
     }
 
     // D5 Fiora: discard facedown cards
-    const fioraActive = Object.values(state.regions).some(r =>
-      r[1 - pIdx].some(c => c.faceUp && c.id === 'D5') ||
-      r[pIdx].some(c => c.faceUp && c.id === 'D5')
+    const fioraActive = Object.values(state.regions).some(
+      (r) =>
+        r[1 - pIdx].some((c) => c.faceUp && c.id === "D5") ||
+        r[pIdx].some((c) => c.faceUp && c.id === "D5"),
     );
     if (faceDown && fioraActive) {
       state.hands[pIdx].splice(handIdx, 1);
@@ -385,25 +625,34 @@ io.on('connection', (socket) => {
     // I5 Irelia: discard if adjacent region has 3+ cards
     if (!faceDown) {
       const adjR = adjacentRegions(regionName);
-      const irelia0Active = state.regions[regionName][0].some(c => c.faceUp && c.id === 'I5');
-      const irelia1Active = state.regions[regionName][1].some(c => c.faceUp && c.id === 'I5');
+      const irelia0Active = state.regions[regionName][0].some(
+        (c) => c.faceUp && c.id === "I5",
+      );
+      const irelia1Active = state.regions[regionName][1].some(
+        (c) => c.faceUp && c.id === "I5",
+      );
       const iriActive = irelia0Active || irelia1Active;
       // Check if target region's adjacent has 3+ for the PLAYING player
       // Rule: if a card is played to adjacent region with 3+ cards already, discard it
       // "adjacent region" here means: the region receiving the card is adjacent to Irelia's region
       // and has 3+ cards total
       if (iriActive) {
-        const iriRegion = REGIONS.find(r =>
-          state.regions[r][0].some(c => c.faceUp && c.id === 'I5') ||
-          state.regions[r][1].some(c => c.faceUp && c.id === 'I5')
+        const iriRegion = REGIONS.find(
+          (r) =>
+            state.regions[r][0].some((c) => c.faceUp && c.id === "I5") ||
+            state.regions[r][1].some((c) => c.faceUp && c.id === "I5"),
         );
         if (iriRegion) {
           const adjToIri = adjacentRegions(iriRegion);
           if (adjToIri.includes(regionName)) {
-            const totalCards = state.regions[regionName][0].length + state.regions[regionName][1].length;
+            const totalCards =
+              state.regions[regionName][0].length +
+              state.regions[regionName][1].length;
             if (totalCards >= 3) {
               state.hands[pIdx].splice(handIdx, 1);
-              state.log.push(`Irelia discards ${cardDef.champion} played to ${regionName}!`);
+              state.log.push(
+                `Irelia discards ${cardDef.champion} played to ${regionName}!`,
+              );
               advanceTurn(state, code, room);
               broadcastState(code);
               return;
@@ -423,10 +672,12 @@ io.on('connection', (socket) => {
       state.quinnEffect[pIdx] = false;
     }
 
-    state.log.push(`Player ${pIdx + 1} plays ${faceDown ? 'facedown card' : cardDef.champion} to ${regionName}.`);
+    state.log.push(
+      `Player ${pIdx + 1} plays ${faceDown ? "facedown card" : cardDef.champion} to ${regionName}.`,
+    );
 
     // Resolve instant ability
-    if (!faceDown && cardDef.type === 'Instant') {
+    if (!faceDown && cardDef.type === "Instant") {
       const result = applyInstantAbility(state, cardId, pIdx, regionName);
       room.state = result.state;
       if (result.pendingAbility) {
@@ -441,7 +692,7 @@ io.on('connection', (socket) => {
   });
 
   // ABILITY RESPONSE
-  socket.on('abilityResponse', (data) => {
+  socket.on("abilityResponse", (data) => {
     const found = getRoomOfSocket(socket.id);
     if (!found) return;
     const { code, room } = found;
@@ -452,57 +703,87 @@ io.on('connection', (socket) => {
     const ability = state.pendingAbility;
 
     // Only the relevant player can respond
-    if (ability.type !== 'N5_opp_flip' && ability.playerIdx !== pIdx) return;
-    if (ability.type === 'N5_opp_flip' && pIdx !== 1 - ability.playerIdx) return;
+    if (ability.type !== "N5_opp_flip" && ability.playerIdx !== pIdx) return;
+    if (ability.type === "N5_opp_flip" && pIdx !== 1 - ability.playerIdx)
+      return;
 
     switch (ability.type) {
-      case 'N1_peek': {
+      case "N1_peek": {
         // data: { deploy: bool, regionName: string|null }
         if (data.deploy && state.deck.length > 0 && data.regionName) {
           const topCard = state.deck.shift();
-          
+
           // D5 Fiora check: discard if either player has an active Fiora
-          const fioraActive = Object.values(state.regions).some(r =>
-            r[1 - pIdx].some(c => c.faceUp && c.id === 'D5') ||
-            r[pIdx].some(c => c.faceUp && c.id === 'D5')
+          const fioraActive = Object.values(state.regions).some(
+            (r) =>
+              r[1 - pIdx].some((c) => c.faceUp && c.id === "D5") ||
+              r[pIdx].some((c) => c.faceUp && c.id === "D5"),
           );
 
           if (fioraActive) {
-            state.log.push(`Katarina: ${pIdx === 0 ? 'You' : 'Opponent'} tried to deploy ${topCard.champion} facedown to ${data.regionName}, but Fiora discarded it!`);
+            state.log.push(
+              `Katarina: ${pIdx === 0 ? "You" : "Opponent"} tried to deploy ${topCard.champion} facedown to ${data.regionName}, but Fiora discarded it!`,
+            );
           } else {
             // Must be adjacent to Noxus (where Katarina was played)
-            state.regions[data.regionName][pIdx].push({ id: topCard.id, faceUp: false });
-            state.log.push(`Katarina: ${pIdx === 0 ? 'You' : 'Opponent'} deployed ${topCard.champion} facedown to ${data.regionName}.`);
+            state.regions[data.regionName][pIdx].push({
+              id: topCard.id,
+              faceUp: false,
+            });
+            state.log.push(
+              `Katarina: ${pIdx === 0 ? "You" : "Opponent"} deployed ${topCard.champion} facedown to ${data.regionName}.`,
+            );
           }
         } else {
-          state.log.push(`Katarina: ${pIdx === 0 ? 'You' : 'Opponent'} chose not to deploy.`);
+          state.log.push(
+            `Katarina: ${pIdx === 0 ? "You" : "Opponent"} chose not to deploy.`,
+          );
         }
         state.pendingAbility = null;
         break;
       }
-      case 'flip_any':
-      case 'flip_adjacent': {
+      case "flip_any":
+      case "flip_adjacent": {
         // data: { targetCardId, targetRegion, targetPlayer }
-        const target = state.regions[data.targetRegion]?.[data.targetPlayer]?.find(c => c.id === data.targetCardId);
+        const target = state.regions[data.targetRegion]?.[
+          data.targetPlayer
+        ]?.find((c) => c.id === data.targetCardId);
         if (target) {
           target.faceUp = !target.faceUp;
-          state.log.push(`${getCardById(ability.sourceCard || 'N2')?.champion || 'Card'}: Flipped ${getCardById(data.targetCardId)?.champion}.`);
-          if (target.faceUp) handleCardFlippedFaceUp(state, target, data.targetRegion, data.targetPlayer);
+          state.log.push(
+            `${getCardById(ability.sourceCard || "N2")?.champion || "Card"}: Flipped ${getCardById(data.targetCardId)?.champion}.`,
+          );
+          if (target.faceUp)
+            handleCardFlippedFaceUp(
+              state,
+              target,
+              data.targetRegion,
+              data.targetPlayer,
+            );
         }
         state.pendingAbility = null;
         break;
       }
-      case 'N5_opp_flip': {
+      case "N5_opp_flip": {
         // Opponent is flipping one of their cards
-        const target = state.regions[data.targetRegion]?.[pIdx]?.find(c => c.id === data.targetCardId);
+        const target = state.regions[data.targetRegion]?.[pIdx]?.find(
+          (c) => c.id === data.targetCardId,
+        );
         if (target) {
           target.faceUp = !target.faceUp;
-          state.log.push(`LeBlanc: Opponent flipped ${getCardById(data.targetCardId)?.champion}.`);
-          if (target.faceUp) handleCardFlippedFaceUp(state, target, data.targetRegion, pIdx);
+          state.log.push(
+            `LeBlanc: Opponent flipped ${getCardById(data.targetCardId)?.champion}.`,
+          );
+          if (target.faceUp)
+            handleCardFlippedFaceUp(state, target, data.targetRegion, pIdx);
         }
-        // Now player (LeBlanc owner) flips one of theirs if valid 
+        // Now player (LeBlanc owner) flips one of theirs if valid
         if (hasValidFlipTargets(state, REGIONS, [ability.playerIdx])) {
-          state.pendingAbility = { type: 'N5_self_flip', playerIdx: ability.playerIdx, label: 'LeBlanc: Now flip one of your own cards.' };
+          state.pendingAbility = {
+            type: "N5_self_flip",
+            playerIdx: ability.playerIdx,
+            label: "LeBlanc: Now flip one of your own cards.",
+          };
           broadcastState(code);
           return;
         } else {
@@ -511,41 +792,52 @@ io.on('connection', (socket) => {
           break;
         }
       }
-      case 'N5_self_flip': {
-        const target = state.regions[data.targetRegion]?.[pIdx]?.find(c => c.id === data.targetCardId);
+      case "N5_self_flip": {
+        const target = state.regions[data.targetRegion]?.[pIdx]?.find(
+          (c) => c.id === data.targetCardId,
+        );
         if (target) {
           target.faceUp = !target.faceUp;
-          state.log.push(`LeBlanc: You flipped ${getCardById(data.targetCardId)?.champion}.`);
-          if (target.faceUp) handleCardFlippedFaceUp(state, target, data.targetRegion, pIdx);
+          state.log.push(
+            `LeBlanc: You flipped ${getCardById(data.targetCardId)?.champion}.`,
+          );
+          if (target.faceUp)
+            handleCardFlippedFaceUp(state, target, data.targetRegion, pIdx);
         }
         state.pendingAbility = null;
         break;
       }
-      case 'I1_move': {
+      case "I1_move": {
         // data: { cardId, fromRegion, toRegion }
         const fromArr = state.regions[data.fromRegion]?.[pIdx];
         if (fromArr) {
-          const cIdx = fromArr.findIndex(c => c.id === data.cardId);
+          const cIdx = fromArr.findIndex((c) => c.id === data.cardId);
           if (cIdx !== -1) {
             const [moved] = fromArr.splice(cIdx, 1);
             state.regions[data.toRegion][pIdx].push(moved);
-            state.log.push(`Ahri: Moved ${getCardById(data.cardId)?.champion} from ${data.fromRegion} to ${data.toRegion}.`);
+            state.log.push(
+              `Ahri: Moved ${getCardById(data.cardId)?.champion} from ${data.fromRegion} to ${data.toRegion}.`,
+            );
           }
         }
         state.pendingAbility = null;
         break;
       }
-      case 'I4_return': {
+      case "I4_return": {
         // data: { cardId, fromRegion } or { skip: true }
         if (!data.skip && data.cardId && data.fromRegion) {
           const fromArr = state.regions[data.fromRegion]?.[pIdx];
           if (fromArr) {
-            const cIdx = fromArr.findIndex(c => c.id === data.cardId && !c.faceUp);
+            const cIdx = fromArr.findIndex(
+              (c) => c.id === data.cardId && !c.faceUp,
+            );
             if (cIdx !== -1) {
               const [returned] = fromArr.splice(cIdx, 1);
               state.hands[pIdx].push(getCardById(returned.id));
               state.extraTurn[pIdx] = true;
-              state.log.push(`Yasuo: Returned ${getCardById(data.cardId)?.champion} to hand. Extra turn granted!`);
+              state.log.push(
+                `Yasuo: Returned ${getCardById(data.cardId)?.champion} to hand. Extra turn granted!`,
+              );
             }
           }
         } else {
@@ -562,7 +854,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // After resolving ability sequence, advance turn 
+    // After resolving ability sequence, advance turn
     if (!state.pendingAbility) {
       advanceTurn(state, code, room);
     }
@@ -570,17 +862,20 @@ io.on('connection', (socket) => {
   });
 
   // WITHDRAW
-  socket.on('withdraw', () => {
+  socket.on("withdraw", () => {
     const found = getRoomOfSocket(socket.id);
     if (!found) return;
     const { code, room } = found;
     const state = room.state;
     const pIdx = playerIndexOf(room, socket.id);
 
-    if (state.phase !== 'playing') return;
-    if (state.currentTurn !== pIdx) return socket.emit('actionError', 'Not your turn.');
-    if (state.withdrawn[pIdx]) return socket.emit('actionError', 'Already withdrawn.');
-    if (state.pendingAbility) return socket.emit('actionError', 'Resolve pending ability first.');
+    if (state.phase !== "playing") return;
+    if (state.currentTurn !== pIdx)
+      return socket.emit("actionError", "Not your turn.");
+    if (state.withdrawn[pIdx])
+      return socket.emit("actionError", "Already withdrawn.");
+    if (state.pendingAbility)
+      return socket.emit("actionError", "Resolve pending ability first.");
 
     state.withdrawn[pIdx] = true;
 
@@ -590,11 +885,11 @@ io.on('connection', (socket) => {
   });
 
   // READY FOR NEXT ROUND
-  socket.on('readyForNextRound', () => {
+  socket.on("readyForNextRound", () => {
     const found = getRoomOfSocket(socket.id);
     if (!found) return;
     const { code, room } = found;
-    if (room.state.phase !== 'roundEnd') return;
+    if (room.state.phase !== "roundEnd") return;
     const pIdx = playerIndexOf(room, socket.id);
     if (pIdx > -1) {
       room.state.readyForNextRound[pIdx] = true;
@@ -607,14 +902,14 @@ io.on('connection', (socket) => {
   });
 
   // SURRENDER
-  socket.on('surrenderMatch', () => {
+  socket.on("surrenderMatch", () => {
     const found = getRoomOfSocket(socket.id);
     if (!found) return;
     const { code, room } = found;
-    if (room.state.phase === 'gameOver') return;
+    if (room.state.phase === "gameOver") return;
     const pIdx = playerIndexOf(room, socket.id);
     if (pIdx > -1) {
-      room.state.phase = 'gameOver';
+      room.state.phase = "gameOver";
       room.state.surrender = true;
       room.state.winner = 1 - pIdx;
       broadcastState(code);
@@ -622,9 +917,10 @@ io.on('connection', (socket) => {
   });
 
   // REJOIN (game.html reconnects after redirect)
-  socket.on('rejoinRoom', ({ code, playerIndex }) => {
+  socket.on("rejoinRoom", ({ code, playerIndex }) => {
     const room = rooms[code];
-    if (!room) return socket.emit('joinError', 'Room not found (may have expired).');
+    if (!room)
+      return socket.emit("joinError", "Room not found (may have expired).");
     // Cancel any pending disconnect timer for this player
     if (room.disconnectTimers?.[playerIndex]) {
       clearTimeout(room.disconnectTimers[playerIndex]);
@@ -633,16 +929,17 @@ io.on('connection', (socket) => {
     // Re-register this socket as the player
     room.players[playerIndex] = socket.id;
     socket.join(code);
-    console.log(`Player ${playerIndex + 1} rejoined room ${code} with socket ${socket.id}`);
+    console.log(
+      `Player ${playerIndex + 1} rejoined room ${code} with socket ${socket.id}`,
+    );
     if (room.state) {
       broadcastState(code);
     }
   });
 
-
   // DISCONNECT
-  socket.on('disconnect', () => {
-    console.log('Disconnected:', socket.id);
+  socket.on("disconnect", () => {
+    console.log("Disconnected:", socket.id);
     const found = getRoomOfSocket(socket.id);
     if (!found) return;
     const { code, room } = found;
@@ -653,13 +950,14 @@ io.on('connection', (socket) => {
     room.disconnectTimers = room.disconnectTimers || {};
     room.disconnectTimers[playerIdx] = setTimeout(() => {
       if (rooms[code] && rooms[code].players[playerIdx] === socket.id) {
-        io.to(code).emit('opponentLeft');
+        io.to(code).emit("opponentLeft");
         delete rooms[code];
-        console.log(`Room ${code} removed after grace period (player ${playerIdx + 1} gone).`);
+        console.log(
+          `Room ${code} removed after grace period (player ${playerIdx + 1} gone).`,
+        );
       }
     }, 10000);
   });
-
 });
 
 // ─── Advance Turn Helper ─────────────────────────────────────────────────────
@@ -705,54 +1003,71 @@ function advanceTurn(state, code, room) {
 }
 
 function endRound(state, code, room) {
-  state.log.push('─── ROUND END ───');
-  
+  state.log.push("─── ROUND END ───");
+
   let roundWinner = null;
   let vpScored = 0;
-  let reason = '';
+  let reason = "";
 
   if (state.withdrawn[0]) {
     roundWinner = 1;
     const p2HandCount = state.hands[1].length;
     vpScored = retreatVP(p2HandCount);
-    reason = 'Player 1 Retreated';
-    state.log.push(`Player 1 retreated. Player 2 gains ${vpScored} VP (Opp. hand: ${p2HandCount}).`);
+    reason = "Player 1 Retreated";
+    state.log.push(
+      `Player 1 retreated. Player 2 gains ${vpScored} VP (Opp. hand: ${p2HandCount}).`,
+    );
   } else if (state.withdrawn[1]) {
     roundWinner = 0;
     const p1HandCount = state.hands[0].length;
     vpScored = retreatVP(p1HandCount);
-    reason = 'Player 2 Retreated';
-    state.log.push(`Player 2 retreated. Player 1 gains ${vpScored} VP (Opp. hand: ${p1HandCount}).`);
+    reason = "Player 2 Retreated";
+    state.log.push(
+      `Player 2 retreated. Player 1 gains ${vpScored} VP (Opp. hand: ${p1HandCount}).`,
+    );
   } else {
     // Normal resolving
     const regionResults = resolveRegions(state);
-    let p1Reg = 0, p2Reg = 0;
+    let p1Reg = 0,
+      p2Reg = 0;
     for (const r of REGIONS) {
       if (regionResults[r] === 0) p1Reg++;
       else p2Reg++;
     }
 
-    if (p1Reg > p2Reg) { roundWinner = 0; vpScored = 6; reason = 'Controlled more Regions'; }
-    else if (p2Reg > p1Reg) { roundWinner = 1; vpScored = 6; reason = 'Controlled more Regions'; }
-    else { roundWinner = state.initiative; vpScored = 6; reason = 'Tie breaker (Initiative)'; }
-    state.log.push(`Player ${roundWinner + 1} controls more regions and gains 6 VP!`);
+    if (p1Reg > p2Reg) {
+      roundWinner = 0;
+      vpScored = 6;
+      reason = "Controlled more Regions";
+    } else if (p2Reg > p1Reg) {
+      roundWinner = 1;
+      vpScored = 6;
+      reason = "Controlled more Regions";
+    } else {
+      roundWinner = state.initiative;
+      vpScored = 6;
+      reason = "Tie breaker (Initiative)";
+    }
+    state.log.push(
+      `Player ${roundWinner + 1} controls more regions and gains 6 VP!`,
+    );
   }
 
   state.scores[roundWinner] += vpScored;
 
   if (state.scores[0] >= 12 || state.scores[1] >= 12) {
-    state.phase = 'gameOver';
+    state.phase = "gameOver";
     state.winner = state.scores[0] >= 12 ? 0 : 1;
     state.log.push(`🏆 Player ${state.winner + 1} wins the game!`);
   } else {
-    state.phase = 'roundEnd';
+    state.phase = "roundEnd";
     state.roundSummary = { winner: roundWinner, points: vpScored, reason };
     state.readyForNextRound = [false, false];
   }
 }
 
 // ─── Start Server ────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`RiftConquest server running at http://localhost:${PORT}`);
 });
