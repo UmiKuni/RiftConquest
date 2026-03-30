@@ -167,7 +167,8 @@ function buildCardStack(cards, playerIdx, region, s, isOpponent = false) {
   stack.className = 'card-stack' + (isOpponent ? ' stack-up' : '');
   // cards[0] = oldest (bottom of pile), cards[last] = newest (uncovered/on top)
   cards.forEach((c, idx) => {
-    const el = buildBoardCard(c, playerIdx, region, s);
+    const isUncovered = idx === cards.length - 1;
+    const el = buildBoardCard(c, playerIdx, region, s, isUncovered);
     el.style.setProperty('--stack-idx', idx);
     el.style.zIndex = idx + 1;
     stack.appendChild(el);
@@ -176,7 +177,7 @@ function buildCardStack(cards, playerIdx, region, s, isOpponent = false) {
 }
 
 // ─── Build a single board card element ────────────────────────────────────
-function buildBoardCard(c, playerIdx, region, s) {
+function buildBoardCard(c, playerIdx, region, s, isUncovered) {
   const card = document.createElement('div');
   card.setAttribute('data-card-id', c.id);
 
@@ -202,7 +203,7 @@ function buildBoardCard(c, playerIdx, region, s) {
   }
 
   // Flip target highlight
-  if (s.pendingAbility && isFlipTarget(s.pendingAbility, region, playerIdx, myIndex)) {
+  if (s.pendingAbility && isFlipTarget(s.pendingAbility, region, playerIdx, myIndex, isUncovered)) {
     card.classList.add('flip-target');
     card.style.cursor = 'crosshair';
     card.addEventListener('click', (e) => {
@@ -218,10 +219,16 @@ function buildBoardCard(c, playerIdx, region, s) {
   return card;
 }
 
-function isFlipTarget(ab, region, cardPlayer, myIdx) {
+function isFlipTarget(ab, region, cardPlayer, myIdx, isUncovered) {
   if (!ab) return false;
+  
+  // All flip abilities only target uncovered cards
+  if (!isUncovered) return false;
+
   if (ab.type === 'flip_any' && ab.playerIdx === myIdx) return true;
-  if (ab.type === 'flip_adjacent' && ab.playerIdx === myIdx) return true;
+  if (ab.type === 'flip_adjacent' && ab.playerIdx === myIdx) {
+    return adjacentTo(ab.playedRegion, region);
+  }
   if (ab.type === 'N5_opp_flip' && ab.playerIdx !== myIdx) return cardPlayer === myIdx;
   if (ab.type === 'N5_self_flip' && ab.playerIdx === myIdx) return cardPlayer === myIdx;
   return false;
@@ -439,10 +446,12 @@ function openAbilityModal(ability, customLabel) {
       break;
     }
     case 'I1_move': {
-      desc.textContent = 'Choose one of your cards to move to a different region.';
+      desc.textContent = 'Choose one of your uncovered cards to move to a different region.';
       let step = 'pick'; let pickedCard = null; let pickedFrom = null;
       for (const r of REGIONS) {
-        for (const c of (gameState.regions[r][myIndex] || [])) {
+        const myCardsInR = gameState.regions[r][myIndex] || [];
+        if (myCardsInR.length > 0) {
+          const c = myCardsInR[myCardsInR.length - 1]; // Only the uncovered card
           const def = getCardDef(c.id);
           const el = mkModalOption(c.id, def.champion, r + (c.faceUp ? ' · STR ' + def.strength : ' · facedown'));
           el.addEventListener('click', () => {
@@ -464,10 +473,12 @@ function openAbilityModal(ability, customLabel) {
       break;
     }
     case 'I4_return': {
-      desc.textContent = 'Return a facedown card to hand and gain an extra turn, or skip.';
+      desc.textContent = 'Return an uncovered facedown card to hand and gain an extra turn, or skip.';
       let anyFound = false;
       for (const r of REGIONS) {
-        for (const c of (gameState.regions[r][myIndex] || [])) {
+        const myCardsInR = gameState.regions[r][myIndex] || [];
+        if (myCardsInR.length > 0) {
+          const c = myCardsInR[myCardsInR.length - 1]; // Only the uncovered card
           if (!c.faceUp) {
             anyFound = true;
             const def = getCardDef(c.id);
@@ -477,7 +488,7 @@ function openAbilityModal(ability, customLabel) {
           }
         }
       }
-      if (!anyFound) desc.textContent = 'No facedown cards to return.';
+      if (!anyFound) desc.textContent = 'No facedown uncovered cards to return.';
       footer.appendChild(mkBtn('Skip', 'btn btn-secondary btn-sm', () => { socket.emit('abilityResponse', { skip: true }); closeModal(); }));
       break;
     }

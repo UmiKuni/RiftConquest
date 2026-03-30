@@ -152,7 +152,7 @@ function hasAnyCards(state, playerIdx) {
 // ─── Ability Resolution ─────────────────────────────────────────────────────
 // Returns { newState, pendingAbility } where pendingAbility is non-null if
 // client needs to respond with more info before turn ends.
-function applyInstantAbility(state, cardId, playerIdx) {
+function applyInstantAbility(state, cardId, playerIdx, playedRegion) {
   const card = getCardById(cardId);
   if (!card || card.type !== 'Instant') return { state, pendingAbility: null };
 
@@ -169,7 +169,7 @@ function applyInstantAbility(state, cardId, playerIdx) {
     case 'N3': // Darius — flip a card in an adjacent region
     case 'D3': // Garen — same
     case 'I3': // Shen  — same
-      return { state, pendingAbility: { type: 'flip_adjacent', playerIdx, sourceCard: cardId, label: `${card.champion}: Flip a card in an adjacent region.` } };
+      return { state, pendingAbility: { type: 'flip_adjacent', playerIdx, sourceCard: cardId, playedRegion, label: `${card.champion}: Flip a card in an adjacent region.` } };
 
     case 'N5': // LeBlanc — opponent flips one of theirs, then you flip one of yours
       return { state, pendingAbility: { type: 'N5_opp_flip', playerIdx, label: 'LeBlanc: Opponent must flip one of their cards.' } };
@@ -392,7 +392,7 @@ io.on('connection', (socket) => {
 
     // Resolve instant ability
     if (!faceDown && cardDef.type === 'Instant') {
-      const result = applyInstantAbility(state, cardId, pIdx);
+      const result = applyInstantAbility(state, cardId, pIdx, regionName);
       room.state = result.state;
       if (result.pendingAbility) {
         room.state.pendingAbility = result.pendingAbility;
