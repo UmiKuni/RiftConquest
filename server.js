@@ -160,6 +160,15 @@ function handleCardFlippedFaceUp(state, targetCard, targetRegion, targetPlayer) 
   }
 }
 
+function hasValidFlipTargets(state, regionNames, playerIndices) {
+  for (const r of regionNames) {
+    for (const p of playerIndices) {
+      if (state.regions[r][p].length > 0) return true;
+    }
+  }
+  return false;
+}
+
 // Returns { newState, pendingAbility } where pendingAbility is non-null if
 // client needs to respond with more info before turn ends.
 function applyInstantAbility(state, cardId, playerIdx, playedRegion) {
@@ -174,15 +183,32 @@ function applyInstantAbility(state, cardId, playerIdx, playedRegion) {
       break;
 
     case 'N2': // Talon — flip any card on the board
-      return { state, pendingAbility: { type: 'flip_any', playerIdx, label: 'Talon: Flip any card on the board.' } };
+      if (hasValidFlipTargets(state, REGIONS, [0, 1])) {
+        return { state, pendingAbility: { type: 'flip_any', playerIdx, label: 'Talon: Flip any card on the board.' } };
+      }
+      state.log.push(`Talon: No valid cards to flip.`);
+      break;
 
     case 'N3': // Darius — flip a card in an adjacent region
     case 'D3': // Garen — same
     case 'I3': // Shen  — same
-      return { state, pendingAbility: { type: 'flip_adjacent', playerIdx, sourceCard: cardId, playedRegion, label: `${card.champion}: Flip a card in an adjacent region.` } };
+      const adj = adjacentRegions(playedRegion);
+      if (hasValidFlipTargets(state, adj, [0, 1])) {
+        return { state, pendingAbility: { type: 'flip_adjacent', playerIdx, sourceCard: cardId, playedRegion, label: `${card.champion}: Flip a card in an adjacent region.` } };
+      }
+      state.log.push(`${card.champion}: No valid cards in adjacent regions to flip.`);
+      break;
 
     case 'N5': // LeBlanc — opponent flips one of theirs, then you flip one of yours
-      return { state, pendingAbility: { type: 'N5_opp_flip', playerIdx, label: 'LeBlanc: Opponent must flip one of their cards.' } };
+      const oppId = 1 - playerIdx;
+      if (hasValidFlipTargets(state, REGIONS, [oppId])) {
+        return { state, pendingAbility: { type: 'N5_opp_flip', playerIdx, label: 'LeBlanc: Opponent must flip one of their cards.' } };
+      } else if (hasValidFlipTargets(state, REGIONS, [playerIdx])) {
+        state.log.push(`LeBlanc: Opponent has no cards to flip.`);
+        return { state, pendingAbility: { type: 'N5_self_flip', playerIdx, label: 'LeBlanc: Now flip one of your own cards.' } };
+      }
+      state.log.push(`LeBlanc: No valid cards to flip for either player.`);
+      break;
 
     case 'D2': // Quinn — next turn deploy to non-matching
       state.quinnEffect[playerIdx] = true;
@@ -190,10 +216,22 @@ function applyInstantAbility(state, cardId, playerIdx, playedRegion) {
       break;
 
     case 'I1': // Ahri — move one of your cards to a different region
-      return { state, pendingAbility: { type: 'I1_move', playerIdx, label: 'Ahri: Move one of your cards to a different region.' } };
+      if (hasValidFlipTargets(state, REGIONS, [playerIdx])) { // Need at least 1 card to move
+        return { state, pendingAbility: { type: 'I1_move', playerIdx, label: 'Ahri: Move one of your cards to a different region.' } };
+      }
+      state.log.push(`Ahri: No cards to move.`);
+      break;
 
     case 'I4': // Yasuo — return a facedown card to hand, gain extra turn
-      return { state, pendingAbility: { type: 'I4_return', playerIdx, label: 'Yasuo: Return a facedown card to your hand for an extra turn (or skip).' } };
+      const hasFacedown = REGIONS.some(r => {
+        const pCards = state.regions[r][playerIdx];
+        return pCards.length > 0 && !pCards[pCards.length - 1].faceUp;
+      });
+      if (hasFacedown) {
+        return { state, pendingAbility: { type: 'I4_return', playerIdx, label: 'Yasuo: Return a facedown card to your hand for an extra turn (or skip).' } };
+      }
+      state.log.push(`Yasuo: No uncovered facedown cards to return.`);
+      break;
   }
 
   return { state, pendingAbility: null };
@@ -462,10 +500,16 @@ io.on('connection', (socket) => {
           state.log.push(`LeBlanc: Opponent flipped ${getCardById(data.targetCardId)?.champion}.`);
           if (target.faceUp) handleCardFlippedFaceUp(state, target, data.targetRegion, pIdx);
         }
-        // Now player (LeBlanc owner) flips one of theirs
-        state.pendingAbility = { type: 'N5_self_flip', playerIdx: ability.playerIdx, label: 'LeBlanc: Now flip one of your own cards.' };
-        broadcastState(code);
-        return;
+        // Now player (LeBlanc owner) flips one of theirs if valid 
+        if (hasValidFlipTargets(state, REGIONS, [ability.playerIdx])) {
+          state.pendingAbility = { type: 'N5_self_flip', playerIdx: ability.playerIdx, label: 'LeBlanc: Now flip one of your own cards.' };
+          broadcastState(code);
+          return;
+        } else {
+          state.log.push(`LeBlanc: You have no cards to flip.`);
+          state.pendingAbility = null;
+          break;
+        }
       }
       case 'N5_self_flip': {
         const target = state.regions[data.targetRegion]?.[pIdx]?.find(c => c.id === data.targetCardId);
