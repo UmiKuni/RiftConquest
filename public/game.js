@@ -446,12 +446,11 @@ function openAbilityModal(ability, customLabel) {
       break;
     }
     case 'I1_move': {
-      desc.textContent = 'Choose one of your uncovered cards to move to a different region.';
+      desc.textContent = 'Choose one of your cards to move to a different region.';
       let step = 'pick'; let pickedCard = null; let pickedFrom = null;
       for (const r of REGIONS) {
         const myCardsInR = gameState.regions[r][myIndex] || [];
-        if (myCardsInR.length > 0) {
-          const c = myCardsInR[myCardsInR.length - 1]; // Only the uncovered card
+        for (const c of myCardsInR) {
           const def = getCardDef(c.id);
           const el = mkModalOption(c.id, def.champion, r + (c.faceUp ? ' · STR ' + def.strength : ' · facedown'));
           el.addEventListener('click', () => {
