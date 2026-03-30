@@ -30,3 +30,5 @@ desktop.ini
 # Build output (if added later)
 dist/
 build/
+
+.github/
