@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Public leaderboard data (server writes only)
+    match /publicUsers/{uid} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Private profile + history (readable only by the authenticated owner)
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+
+      match /matchHistory/{matchId} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
+    }
+
+    // Matches are server-only by default (can be opened later if needed)
+    match /matches/{matchId} {
+      allow read, write: if false;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

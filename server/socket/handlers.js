@@ -7,6 +7,11 @@ const {
   hasValidFlipTargets,
 } = require("../game/abilities");
 const { advanceTurn, endRound } = require("../game/round");
+const { verifyIdToken } = require("../firebaseAdmin");
+const {
+  upsertUserFromDecoded,
+  recordMatch,
+} = require("../persistence/firestore");
 
 const ALLOWED_EMOJI_REACTIONS = new Set(["haha", "like", "sad"]);
 const EMOJI_RATE_WINDOW_MS = 5000;
@@ -15,12 +20,107 @@ const EMOJI_RATE_MAX = 3;
 function registerSocketHandlers(io, roomManager) {
   const { rooms } = roomManager;
 
+  function setRoomPlayerUid(room, playerIdx, uid) {
+    if (!room || playerIdx < 0 || playerIdx > 1) return;
+    room.playerUids = room.playerUids || [null, null];
+    room.playerUids[playerIdx] = uid || null;
+  }
+
+  function maybePersistMatch(code, room) {
+    if (!room || !room.state) return;
+    if (room.state.phase !== "gameOver") return;
+    if (room.matchRecorded || room.matchRecordInProgress) return;
+
+    const winnerIndex = room.state.winner;
+    if (winnerIndex !== 0 && winnerIndex !== 1) return;
+
+    const uids = room.playerUids || [];
+    if (!uids[0] || !uids[1]) return;
+
+    const now = Date.now();
+    if (
+      room.matchPersistLastAttemptAt &&
+      now - room.matchPersistLastAttemptAt < 10000
+    ) {
+      return;
+    }
+    room.matchPersistLastAttemptAt = now;
+
+    room.matchRecordInProgress = true;
+    void recordMatch({
+      roomCode: code,
+      playerUids: [uids[0], uids[1]],
+      winnerIndex,
+      scores: room.state.scores,
+      surrendered: !!room.state.surrender,
+      startedAtMs: room.matchStartedAtMs,
+      endedAtMs: now,
+    })
+      .then((result) => {
+        room.matchRecorded = true;
+        room.matchId = result && result.matchId ? result.matchId : null;
+      })
+      .catch((err) => {
+        console.warn(
+          `[match] Persist failed for room ${code}:`,
+          err && err.message ? err.message : err,
+        );
+      })
+      .finally(() => {
+        room.matchRecordInProgress = false;
+      });
+  }
+
   io.on("connection", (socket) => {
     console.log("Connected:", socket.id);
+
+    // Firebase Auth (anonymous / Google / email-password)
+    // Client sends an ID token; server verifies and attaches identity to this socket.
+    socket.on("authToken", async (payload) => {
+      const token =
+        payload && typeof payload.token === "string" ? payload.token : "";
+      if (!token) return;
+
+      try {
+        const decoded = await verifyIdToken(token);
+        const provider = decoded.firebase && decoded.firebase.sign_in_provider;
+        socket.data.firebaseUser = {
+          uid: decoded.uid,
+          email: decoded.email || null,
+          name: decoded.name || null,
+          provider: provider || null,
+          isAnonymous: provider === "anonymous",
+        };
+
+        // Best-effort: create/update the server-backed player profile.
+        void upsertUserFromDecoded(decoded).catch(() => {});
+
+        // If the socket is already associated with a room, attach the UID.
+        const found = roomManager.getRoomOfSocket(socket.id);
+        if (found) {
+          const { room } = found;
+          const pIdx = roomManager.playerIndexOf(room, socket.id);
+          setRoomPlayerUid(room, pIdx, decoded.uid);
+        }
+
+        socket.emit("authOk", {
+          uid: decoded.uid,
+          provider: provider || null,
+          isAnonymous: provider === "anonymous",
+        });
+      } catch (err) {
+        delete socket.data.firebaseUser;
+        socket.emit("authError", "Auth failed.");
+      }
+    });
 
     // HOST
     socket.on("hostRoom", () => {
       const code = roomManager.createRoom(socket.id);
+      const room = rooms[code];
+      if (room && socket.data.firebaseUser && socket.data.firebaseUser.uid) {
+        setRoomPlayerUid(room, 0, socket.data.firebaseUser.uid);
+      }
       socket.join(code);
       socket.emit("roomCreated", { code });
       console.log(`Room ${code} created by ${socket.id}`);
@@ -33,6 +133,14 @@ function registerSocketHandlers(io, roomManager) {
       if (room.players[1]) return socket.emit("joinError", "Room is full.");
 
       room.players[1] = socket.id;
+      if (socket.data.firebaseUser && socket.data.firebaseUser.uid) {
+        setRoomPlayerUid(room, 1, socket.data.firebaseUser.uid);
+      }
+
+      room.matchStartedAtMs = Date.now();
+      room.matchRecorded = false;
+      room.matchRecordInProgress = false;
+      room.matchId = null;
       socket.join(code);
 
       // Start game
@@ -123,6 +231,7 @@ function registerSocketHandlers(io, roomManager) {
         state.hands[pIdx].splice(handIdx, 1);
         state.log.push(`Fiora discards ${cardDef.champion} (facedown)!`);
         advanceTurn(state, code, room);
+        maybePersistMatch(code, room);
         roomManager.broadcastState(code);
         return;
       }
@@ -159,6 +268,7 @@ function registerSocketHandlers(io, roomManager) {
                   `Irelia discards ${cardDef.champion} played to ${regionName}!`,
                 );
                 advanceTurn(state, code, room);
+                maybePersistMatch(code, room);
                 roomManager.broadcastState(code);
                 return;
               }
@@ -193,6 +303,7 @@ function registerSocketHandlers(io, roomManager) {
       }
 
       advanceTurn(state, code, room);
+      maybePersistMatch(code, room);
       roomManager.broadcastState(code);
     });
 
@@ -363,6 +474,7 @@ function registerSocketHandlers(io, roomManager) {
       if (!state.pendingAbility) {
         advanceTurn(state, code, room);
       }
+      maybePersistMatch(code, room);
       roomManager.broadcastState(code);
     });
 
@@ -383,6 +495,10 @@ function registerSocketHandlers(io, roomManager) {
         `Player ${playerIndex + 1} rejoined room ${code} with socket ${socket.id}`,
       );
       if (room.state) {
+        // Re-attach UID mapping on rejoin (helps if auth arrived late).
+        if (socket.data.firebaseUser && socket.data.firebaseUser.uid) {
+          setRoomPlayerUid(room, playerIndex, socket.data.firebaseUser.uid);
+        }
         roomManager.broadcastState(code);
       }
     });
@@ -407,6 +523,7 @@ function registerSocketHandlers(io, roomManager) {
 
       // End round normally to go to roundEnd phase
       endRound(state, code, room);
+      maybePersistMatch(code, room);
       roomManager.broadcastState(code);
     });
 
@@ -441,6 +558,7 @@ function registerSocketHandlers(io, roomManager) {
         room.state.phase = "gameOver";
         room.state.surrender = true;
         room.state.winner = 1 - pIdx;
+        maybePersistMatch(code, room);
         roomManager.broadcastState(code);
       }
     });

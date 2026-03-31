@@ -6,6 +6,9 @@ node_modules/
 .env.local
 .env.*.local
 
+# Local secrets (e.g., Firebase Admin SDK key)
+.local/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

@@ -1,6 +1,20 @@
 const socket = io();
 const REGIONS = ["Noxus", "Demacia", "Ionia"];
 
+// Attach Firebase identity (anonymous or logged-in) to this Socket.io connection.
+// Safe: if Firebase isn't available, gameplay continues as before.
+if (window.firebaseAuth) {
+  window.firebaseAuth.onAuthStateChanged(async (user) => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      socket.emit("authToken", { token });
+    } catch (e) {
+      // ignore
+    }
+  });
+}
+
 // ─── State ─────────────────────────────────────────────────────────────────
 let gameState = null;
 let myIndex = null;

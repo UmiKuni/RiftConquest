@@ -11,8 +11,13 @@ function createRoomManager(io) {
 
     rooms[code] = {
       players: [hostSocketId, null],
+      playerUids: [null, null],
       state: null,
       disconnectTimers: {},
+      matchStartedAtMs: null,
+      matchRecorded: false,
+      matchRecordInProgress: false,
+      matchId: null,
     };
 
     return code;
