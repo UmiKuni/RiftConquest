@@ -124,18 +124,45 @@ function render() {
     const hEl = document.getElementById("retreatVPHint");
     if (hEl) hEl.classList.add("hidden");
 
-    if (s.readyForNextRound[myIndex]) {
-      document.getElementById("btnRsContinue").classList.add("hidden");
-      document.getElementById("btnRsSurrender").classList.add("hidden");
-      sb.innerHTML +=
-        '<br/><i style="opacity:0.8; font-size:0.9em">(Waiting for opponent...)</i>';
-    } else {
-      document.getElementById("btnRsContinue").classList.remove("hidden");
-      document.getElementById("btnRsSurrender").classList.remove("hidden");
+    const btnContinue = document.getElementById("btnRsContinue");
+    const btnSurrender = document.getElementById("btnRsSurrender");
+
+    // Always show round-end actions; when we've already confirmed, switch to a
+    // disabled waiting state instead of hiding the buttons.
+    btnContinue.classList.remove("hidden");
+    btnSurrender.classList.remove("hidden");
+
+    const iAmReady = !!s.readyForNextRound[myIndex];
+    btnContinue.disabled = iAmReady;
+    btnSurrender.disabled = iAmReady;
+
+    const continueIcon = btnContinue.querySelector("span.mdi");
+    const continueLabel = btnContinue.querySelector("span:last-child");
+    if (continueLabel) {
+      continueLabel.textContent = iAmReady
+        ? "Waiting for opponent…"
+        : "Continue Next Round";
+    }
+    if (continueIcon) {
+      continueIcon.classList.toggle("mdi-skip-next", !iAmReady);
+      continueIcon.classList.toggle("mdi-timer-sand", iAmReady);
     }
   } else {
-    document.getElementById("btnRsContinue").classList.add("hidden");
-    document.getElementById("btnRsSurrender").classList.add("hidden");
+    const btnContinue = document.getElementById("btnRsContinue");
+    const btnSurrender = document.getElementById("btnRsSurrender");
+    btnContinue.classList.add("hidden");
+    btnSurrender.classList.add("hidden");
+    btnContinue.disabled = false;
+    btnSurrender.disabled = false;
+
+    const continueIcon = btnContinue.querySelector("span.mdi");
+    const continueLabel = btnContinue.querySelector("span:last-child");
+    if (continueLabel) continueLabel.textContent = "Continue Next Round";
+    if (continueIcon) {
+      continueIcon.classList.add("mdi-skip-next");
+      continueIcon.classList.remove("mdi-timer-sand");
+    }
+
     document.getElementById("btnWithdraw").classList.remove("hidden");
     const hEl = document.getElementById("retreatVPHint");
     if (hEl) hEl.classList.remove("hidden");
