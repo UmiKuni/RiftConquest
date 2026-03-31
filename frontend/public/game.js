@@ -330,23 +330,25 @@ function renderBoard(s) {
     }
 
     col.innerHTML = `
-      <div class="region-header">
-        <div class="region-title-wrap">
-          <img src="/image/Icon_${region}.webp" class="region-icon" alt="" onerror="this.style.display='none'">
-          <span class="region-name">${region}</span>
-        </div>
-        ${crown.includes("region-result-badge") ? crown : ""}
-        <div class="region-strength-bar">
-          <span class="str-value str-my">${myStr}</span>
-          <span class="str-sep">:</span>
-          <span class="str-value str-opp">${oppStr}</span>
-          ${!crown.includes("region-result-badge") ? crown : ""}
-        </div>
-      </div>
       <div class="region-body">
         <div class="side-section opp-side" data-region="${region}" data-player="${1 - myIndex}">
           <div class="side-label">Opponent</div>
         </div>
+
+        <div class="region-header region-status-bar">
+          <div class="region-title-wrap">
+            <img src="/image/Icon_${region}.webp" class="region-icon" alt="" onerror="this.style.display='none'">
+            <span class="region-name">${region}</span>
+          </div>
+          ${crown.includes("region-result-badge") ? crown : ""}
+          <div class="region-strength-bar">
+            <span class="str-value str-my">${myStr}</span>
+            <span class="str-sep">:</span>
+            <span class="str-value str-opp">${oppStr}</span>
+            ${!crown.includes("region-result-badge") ? crown : ""}
+          </div>
+        </div>
+
         <div class="side-section my-side" data-region="${region}" data-player="${myIndex}">
           <div class="side-label">You</div>
         </div>

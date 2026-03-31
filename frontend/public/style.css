@@ -634,7 +634,7 @@ body {
 .board {
   display: flex;
   gap: 0.6rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.45rem 0.75rem;
   flex: 1;
   overflow: hidden;
   min-height: 0;
@@ -660,19 +660,19 @@ body {
 .region-col[data-region="Noxus"] {
   border-color: rgba(192, 57, 43, 0.3);
   background:
-    linear-gradient(to bottom, rgba(30, 15, 15, 0.55), rgba(15, 8, 8, 0.85)),
+    linear-gradient(to bottom, rgba(30, 15, 15, 0.38), rgba(15, 8, 8, 0.72)),
     url("/image/Bg_Noxus.jpg") center/cover no-repeat;
 }
 .region-col[data-region="Demacia"] {
   border-color: rgba(41, 128, 185, 0.3);
   background:
-    linear-gradient(to bottom, rgba(15, 20, 30, 0.55), rgba(8, 12, 18, 0.85)),
+    linear-gradient(to bottom, rgba(15, 20, 30, 0.38), rgba(8, 12, 18, 0.72)),
     url("/image/Bg_Demacia.jpg") center/cover no-repeat;
 }
 .region-col[data-region="Ionia"] {
   border-color: rgba(142, 68, 173, 0.3);
   background:
-    linear-gradient(to bottom, rgba(25, 15, 30, 0.55), rgba(12, 8, 15, 0.85)),
+    linear-gradient(to bottom, rgba(25, 15, 30, 0.38), rgba(12, 8, 15, 0.72)),
     url("/image/Bg_Ionia.jpg") center/cover no-repeat;
 }
 
@@ -680,7 +680,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.45rem 0.65rem;
+  padding: 0.35rem 0.6rem;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .region-col[data-region="Noxus"] .region-header {
@@ -766,12 +768,24 @@ body {
   cursor: pointer;
   overflow: visible;
 }
+.side-section.opp-side {
+  justify-content: flex-end;
+}
+.side-section.opp-side .card-stack {
+  order: 1;
+}
+.side-section.opp-side .side-label {
+  order: 2;
+  margin-top: 0.15rem;
+  margin-bottom: 0;
+}
 .side-section.my-side {
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 0;
 }
 .side-label {
   font-size: 0.5rem;
   color: var(--text-muted);
+  font-weight: 900;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   margin-bottom: 0.15rem;
@@ -787,7 +801,7 @@ body {
 }
 
 /* Each card after the first overlaps the one before it — covers ~80% of the card below */
-.card-stack .board-card + .board-card {
+.card-stack:not(.stack-up) .board-card + .board-card {
   margin-top: -106px; /* card height ~132px; shows only header (~26px) of buried card */
   position: relative;
 }
@@ -799,10 +813,6 @@ body {
 .card-stack.stack-up .board-card:not(:last-child) {
   margin-top: -106px; /* pull older cards (at visual bottom) up under the newer ones */
   position: relative;
-}
-/* Reset the default downward-stack margin for stack-up */
-.card-stack.stack-up .board-card + .board-card {
-  margin-top: 0;
 }
 
 /* ── BOARD CARDS ─────────────────────────────────────────────────────────── */
@@ -989,13 +999,13 @@ body {
   flex-shrink: 0;
   background: rgba(0, 0, 0, 0.5);
   border-top: 1px solid var(--border);
-  padding: 0.5rem 0.75rem;
+  padding: 0.4rem 0.75rem 0.35rem;
 }
 .hand-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.35rem;
 }
 .hand-title {
   font-family: "Cinzel", serif;
@@ -1020,7 +1030,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  padding-top: 2rem;
+  padding-top: 1.3rem;
   overflow: visible;
 }
 
