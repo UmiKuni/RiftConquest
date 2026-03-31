@@ -1,59 +1,79 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RiftConquest — Enter the Rift</title>
-  <meta name="description" content="RiftConquest: A 2-player online card game. Deploy champions, conquer regions, and be first to 12 Victory Points." />
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="lobby-bg">
-    <div class="lobby-card">
-
-      <div class="lobby-logo">
-        <h1 class="cinzel">RiftConquest</h1>
-        <p class="subtitle">Battle for the Rift · 2 Players</p>
-      </div>
-
-      <div class="lobby-divider"><span>ENTER THE RIFT</span></div>
-
-      <!-- Default action buttons -->
-      <div class="lobby-actions" id="mainActions">
-        <button class="btn btn-primary" id="btnHost">🏰 Host Room</button>
-        <button class="btn btn-secondary" id="btnShowJoin">⚔️ Join Room</button>
-      </div>
-
-      <!-- Join form (hidden by default) -->
-      <div class="lobby-actions hidden" id="joinActions">
-        <div class="join-form">
-          <input
-            id="codeInput"
-            class="input-field"
-            type="text"
-            maxlength="4"
-            placeholder="Enter room code"
-            autocomplete="off"
-            spellcheck="false"
-          />
-          <button class="btn btn-primary" id="btnJoin">⚔️ Join Battle</button>
-          <button class="btn btn-secondary" id="btnCancelJoin">← Back</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RiftConquest — Enter the Rift</title>
+    <meta
+      name="description"
+      content="RiftConquest: A 2-player online card game. Deploy champions, conquer regions, and be first to 12 Victory Points."
+    />
+    <link rel="stylesheet" href="/vendor/mdi/css/materialdesignicons.min.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="lobby-bg">
+      <div class="lobby-card">
+        <div class="lobby-logo">
+          <h1 class="cinzel">RiftConquest</h1>
+          <p class="subtitle">Battle for the Rift · 2 Players</p>
         </div>
+
+        <div class="lobby-divider"><span>ENTER THE RIFT</span></div>
+
+        <!-- Default action buttons -->
+        <div class="lobby-actions" id="mainActions">
+          <button class="btn btn-primary" id="btnHost">
+            <span class="mdi mdi-castle ui-icon" aria-hidden="true"></span
+            ><span>Host Room</span>
+          </button>
+          <button class="btn btn-secondary" id="btnShowJoin">
+            <span class="mdi mdi-sword-cross ui-icon" aria-hidden="true"></span
+            ><span>Join Room</span>
+          </button>
+        </div>
+
+        <!-- Join form (hidden by default) -->
+        <div class="lobby-actions hidden" id="joinActions">
+          <div class="join-form">
+            <input
+              id="codeInput"
+              class="input-field"
+              type="text"
+              maxlength="4"
+              placeholder="Enter room code"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button class="btn btn-primary" id="btnJoin">
+              <span
+                class="mdi mdi-sword-cross ui-icon"
+                aria-hidden="true"
+              ></span
+              ><span>Join Battle</span>
+            </button>
+            <button class="btn btn-secondary" id="btnCancelJoin">← Back</button>
+          </div>
+        </div>
+
+        <!-- Room code display (after hosting) -->
+        <div class="room-code-display hidden" id="roomDisplay">
+          <p class="label">Room Code</p>
+          <p class="code" id="roomCodeText">----</p>
+          <p class="hint">
+            Share this code with your opponent.<br /><span
+              class="waiting-pulse mdi mdi-timer-sand ui-icon"
+              aria-hidden="true"
+            ></span>
+            Waiting for opponent to join…
+          </p>
+        </div>
+
+        <p class="status-msg" id="statusMsg"></p>
       </div>
-
-      <!-- Room code display (after hosting) -->
-      <div class="room-code-display hidden" id="roomDisplay">
-        <p class="label">Room Code</p>
-        <p class="code" id="roomCodeText">----</p>
-        <p class="hint">Share this code with your opponent.<br><span class="waiting-pulse">⏳</span> Waiting for opponent to join…</p>
-      </div>
-
-      <p class="status-msg" id="statusMsg"></p>
-
     </div>
-  </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="lobby.js"></script>
-</body>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="lobby.js"></script>
+  </body>
 </html>

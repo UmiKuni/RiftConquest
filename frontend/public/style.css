@@ -83,6 +83,16 @@ body {
   display: none !important;
 }
 
+.ui-icon {
+  display: inline-block;
+  line-height: 1;
+  vertical-align: -0.125em;
+}
+.ui-icon::before {
+  font-size: inherit;
+  line-height: inherit;
+}
+
 /* ════════════════════════════════════════════════════════════════════════════
    LOBBY PAGE
    ════════════════════════════════════════════════════════════════════════════ */
@@ -961,11 +971,11 @@ body {
   border: 1px solid rgba(200, 155, 60, 0.2);
   cursor: default;
 }
-.board-card.facedown::after {
-  content: "⚔";
+.board-card.facedown .facedown-icon {
   font-size: 1.4rem;
   opacity: 0.25;
   color: var(--gold);
+  pointer-events: none;
 }
 .board-card.flip-target {
   box-shadow:

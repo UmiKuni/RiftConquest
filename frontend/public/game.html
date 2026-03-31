@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RiftConquest — Battle</title>
+    <link rel="stylesheet" href="/vendor/mdi/css/materialdesignicons.min.css" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -40,7 +41,10 @@
                 <span class="player-label">Opponent</span>
               </div>
               <div class="opp-cards-left" title="Opponent cards remaining">
-                <span class="icon">🃏</span>
+                <span
+                  class="icon mdi mdi-cards ui-icon"
+                  aria-hidden="true"
+                ></span>
                 <span class="count" id="oppHandCountBadge">6</span>
               </div>
             </div>
@@ -60,23 +64,36 @@
             <div class="actions-bar" id="actionsBar">
               <!-- Normal phase -->
               <button class="btn btn-secondary btn-sm hidden" id="btnFaceDown">
-                🌑 Hidden Deploy
+                <span class="mdi mdi-eye-off ui-icon" aria-hidden="true"></span>
+                <span>Hidden Deploy</span>
               </button>
               <button class="btn btn-danger btn-sm" id="btnWithdraw">
-                🏳️ Retreat
+                <span
+                  class="mdi mdi-flag-variant ui-icon"
+                  aria-hidden="true"
+                ></span>
+                <span>Retreat</span>
               </button>
               <span class="retreat-vp-hint" id="retreatVPHint"></span>
 
               <!-- Round End phase -->
               <button class="btn btn-primary btn-sm hidden" id="btnRsContinue">
-                ⏭️ Continue Next Round
+                <span
+                  class="mdi mdi-skip-next ui-icon"
+                  aria-hidden="true"
+                ></span>
+                <span>Continue Next Round</span>
               </button>
               <button
                 class="btn btn-danger btn-sm hidden"
                 id="btnRsSurrender"
                 style="margin-left: 0.5rem"
               >
-                🏳️ Surrender Game
+                <span
+                  class="mdi mdi-flag-variant ui-icon"
+                  aria-hidden="true"
+                ></span>
+                <span>Surrender Game</span>
               </button>
             </div>
           </div>
@@ -92,7 +109,9 @@
         <!-- Card Info -->
         <div class="sidebar-card-info">
           <div class="card-info-idle" id="cardInfoIdle">
-            <div class="card-info-idle-icon">🃏</div>
+            <div class="card-info-idle-icon">
+              <span class="mdi mdi-cards ui-icon" aria-hidden="true"></span>
+            </div>
             <div class="card-info-idle-text">
               Hover a face-up card<br />to see its details
             </div>
@@ -133,7 +152,13 @@
         <!-- Round Log -->
         <div class="sidebar-log">
           <div class="log-header">
-            <div class="sidebar-log-title">📜 Round Log</div>
+            <div class="sidebar-log-title">
+              <span
+                class="mdi mdi-script-text ui-icon"
+                aria-hidden="true"
+              ></span>
+              Round Log
+            </div>
             <button class="guide-btn-sidebar" id="guideBtn" title="How to play">
               ? Guide
             </button>
@@ -153,7 +178,12 @@
         </div>
         <div class="guide-popup-body">
           <div class="guide-block">
-            <div class="guide-icon">⚔️</div>
+            <div class="guide-icon">
+              <span
+                class="mdi mdi-sword-cross ui-icon"
+                aria-hidden="true"
+              ></span>
+            </div>
             <div>
               <div class="guide-label">Deploy Face-Up</div>
               <div class="guide-text">
@@ -163,7 +193,9 @@
             </div>
           </div>
           <div class="guide-block">
-            <div class="guide-icon">🌑</div>
+            <div class="guide-icon">
+              <span class="mdi mdi-eye-off ui-icon" aria-hidden="true"></span>
+            </div>
             <div>
               <div class="guide-label">Deploy Face-Down</div>
               <div class="guide-text">
@@ -174,7 +206,12 @@
             </div>
           </div>
           <div class="guide-block">
-            <div class="guide-icon">🏳️</div>
+            <div class="guide-icon">
+              <span
+                class="mdi mdi-flag-variant ui-icon"
+                aria-hidden="true"
+              ></span>
+            </div>
             <div>
               <div class="guide-label">Retreat</div>
               <div class="guide-text">
@@ -184,7 +221,9 @@
             </div>
           </div>
           <div class="guide-block">
-            <div class="guide-icon">👑</div>
+            <div class="guide-icon">
+              <span class="mdi mdi-crown ui-icon" aria-hidden="true"></span>
+            </div>
             <div>
               <div class="guide-label">Win Condition</div>
               <div class="guide-text">
@@ -195,7 +234,12 @@
             </div>
           </div>
           <div class="guide-block">
-            <div class="guide-icon">📍</div>
+            <div class="guide-icon">
+              <span
+                class="mdi mdi-map-marker ui-icon"
+                aria-hidden="true"
+              ></span>
+            </div>
             <div>
               <div class="guide-label">Regions &amp; Adjacency</div>
               <div class="guide-text">
@@ -205,7 +249,9 @@
             </div>
           </div>
           <div class="guide-block">
-            <div class="guide-icon">🔄</div>
+            <div class="guide-icon">
+              <span class="mdi mdi-autorenew ui-icon" aria-hidden="true"></span>
+            </div>
             <div>
               <div class="guide-label">Initiative</div>
               <div class="guide-text">
@@ -265,11 +311,16 @@
     <!-- ── Win Screen ── -->
     <div class="win-overlay hidden" id="winOverlay">
       <div class="win-box">
-        <span class="trophy" id="winTrophy">🏆</span>
+        <span
+          class="trophy mdi mdi-trophy ui-icon"
+          id="winTrophy"
+          aria-hidden="true"
+        ></span>
         <h2 id="winTitle">Victory!</h2>
         <p id="winDesc">You conquered the Rift!</p>
         <button class="btn btn-primary" onclick="location.href = '/'">
-          ⚔️ Play Again
+          <span class="mdi mdi-sword-cross ui-icon" aria-hidden="true"></span>
+          <span>Play Again</span>
         </button>
       </div>
     </div>

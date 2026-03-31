@@ -7,6 +7,22 @@ let myIndex = null;
 let selectedCard = null;
 let deployFaceDown = false;
 
+function makeMdiIcon(iconClass, extraClass = "") {
+  const el = document.createElement("span");
+  el.className = `mdi ${iconClass} ui-icon${extraClass ? " " + extraClass : ""}`;
+  el.setAttribute("aria-hidden", "true");
+  return el;
+}
+
+function setElIconText(el, iconClass, text) {
+  el.textContent = "";
+  if (iconClass) {
+    el.appendChild(makeMdiIcon(iconClass));
+    el.appendChild(document.createTextNode(" "));
+  }
+  el.appendChild(document.createTextNode(text));
+}
+
 // ─── Room & Player from URL ────────────────────────────────────────────────
 const params = new URLSearchParams(location.search);
 const roomCode = params.get("room") || sessionStorage.getItem("roomCode");
@@ -40,7 +56,7 @@ socket.on("gameState", (state) => {
   render();
 });
 
-socket.on("actionError", (msg) => showToast("⚠️ " + msg, true));
+socket.on("actionError", (msg) => showToast(msg, true));
 
 socket.on("opponentLeft", () => {
   showToast("Opponent disconnected.", true);
@@ -99,6 +115,8 @@ function render() {
     const color = isMyWin ? "#e0d8c0" : "#ff3838";
     const text = isMyWin ? "You won the round! " : "Opponent won the round! ";
 
+    sb.className = "status-bar";
+
     sb.innerHTML = `<span style="color:${color}; font-weight:bold">${text}</span><span style="color:#f1c40f">(${s.roundSummary.reason})</span> <strong style="color:${color}">+${s.roundSummary.points} VP</strong>`;
 
     document.getElementById("btnFaceDown").classList.add("hidden");
@@ -123,35 +141,45 @@ function render() {
     if (hEl) hEl.classList.remove("hidden");
   }
 
-  if (s.pendingAbility) {
-    const ab = s.pendingAbility;
-    const responderIdx =
-      ab.type === "N5_opp_flip" ? 1 - ab.playerIdx : ab.playerIdx;
-    const iShouldRespond = responderIdx === myIndex;
+  if (s.phase !== "roundEnd") {
+    if (s.pendingAbility) {
+      const ab = s.pendingAbility;
+      const responderIdx =
+        ab.type === "N5_opp_flip" ? 1 - ab.playerIdx : ab.playerIdx;
+      const iShouldRespond = responderIdx === myIndex;
 
-    // Label to display in the status bar (avoid showing "undefined")
-    let displayLabel = ab.label;
-    if (ab.type === "N5_opp_flip" && iShouldRespond) {
-      displayLabel = "LeBlanc: You must flip one of your cards.";
-    }
-    if (!displayLabel) {
-      displayLabel = iShouldRespond
-        ? abilityTitle(ab.type)
-        : "Opponent resolving ability…";
-    }
+      // Label to display in the status bar (avoid showing "undefined")
+      let displayLabel = ab.label;
+      if (ab.type === "N5_opp_flip" && iShouldRespond) {
+        displayLabel = "LeBlanc: You must flip one of your cards.";
+      }
+      if (!displayLabel) {
+        displayLabel = iShouldRespond
+          ? abilityTitle(ab.type)
+          : "Opponent resolving ability…";
+      }
 
-    sb.className = "status-bar pending";
-    sb.textContent = (iShouldRespond ? "⚡ " : "⏳ ") + displayLabel;
+      sb.className = "status-bar pending";
+      setElIconText(
+        sb,
+        iShouldRespond ? "mdi-lightning-bolt" : "mdi-timer-sand",
+        displayLabel,
+      );
 
-    if (iShouldRespond) {
-      openAbilityModal(ab, displayLabel);
+      if (iShouldRespond) {
+        openAbilityModal(ab, displayLabel);
+      }
+    } else if (s.currentTurn === myIndex) {
+      sb.className = "status-bar your-turn";
+      setElIconText(
+        sb,
+        "mdi-sword-cross",
+        "Your turn — select a champion, then click a region.",
+      );
+    } else {
+      sb.className = "status-bar opp-turn";
+      setElIconText(sb, "mdi-timer-sand", "Waiting for opponent…");
     }
-  } else if (s.currentTurn === myIndex) {
-    sb.className = "status-bar your-turn";
-    sb.textContent = "⚔️ Your turn — select a champion, then click a region.";
-  } else {
-    sb.className = "status-bar opp-turn";
-    sb.textContent = "⏳ Waiting for opponent…";
   }
 
   renderBoard(s);
@@ -199,10 +227,10 @@ function renderBoard(s) {
     } else {
       if (myStr > oppStr)
         crown =
-          '<span class="control-crown" title="You control this region">👑</span>';
+          '<span class="control-crown mdi mdi-crown ui-icon" title="You control this region" aria-hidden="true"></span>';
       if (oppStr > myStr)
         crown =
-          '<span class="control-crown" style="filter:grayscale(1)" title="Opponent controls this region">👑</span>';
+          '<span class="control-crown mdi mdi-crown ui-icon" style="filter:grayscale(1)" title="Opponent controls this region" aria-hidden="true"></span>';
     }
 
     col.innerHTML = `
@@ -295,13 +323,13 @@ function buildBoardCard(c, playerIdx, region, s, isUncovered) {
           <span class="card-name">${def.champion}</span>
           ${
             def.type === "Instant"
-              ? '<span class="card-type-icon" title="Instant">⚡</span>'
+              ? '<span class="card-type-icon mdi mdi-lightning-bolt ui-icon" title="Instant" aria-hidden="true"></span>'
               : def.type === "Ongoing"
-                ? '<span class="card-type-icon" title="Ongoing">⏳</span>'
+                ? '<span class="card-type-icon mdi mdi-timer-sand ui-icon" title="Ongoing" aria-hidden="true"></span>'
                 : ""
           }
         </div>
-        <span class="card-str">&#9876; ${def.strength}</span>
+        <span class="card-str"><span class="mdi mdi-sword-cross ui-icon" aria-hidden="true"></span> ${def.strength}</span>
       </div>
       <img src="/image/${c.id}${getImgExt(c.id)}" alt="${def.champion}"
            onerror="this.style.display='none'" />
@@ -313,6 +341,8 @@ function buildBoardCard(c, playerIdx, region, s, isUncovered) {
     card.addEventListener("mouseleave", hideCardInfo);
   } else {
     card.className = "board-card facedown";
+    card.innerHTML =
+      '<span class="mdi mdi-sword-cross ui-icon facedown-icon" aria-hidden="true"></span>';
   }
 
   // Flip target highlight
@@ -427,11 +457,12 @@ function selectCard(card) {
     selectedCard = null;
     deployFaceDown = false;
     document.getElementById("btnFaceDown").classList.add("hidden");
-    document.getElementById("btnFaceDown").textContent = "🌑 Hidden Deploy";
+    setFaceDownButtonState(false);
   } else {
     selectedCard = { id: card.id, cardDef: card };
     deployFaceDown = false;
     document.getElementById("btnFaceDown").classList.remove("hidden");
+    setFaceDownButtonState(false);
   }
   renderHand(gameState.myHand);
   renderBoard(gameState);
@@ -443,7 +474,7 @@ function deployCard(cardId, region, faceDown) {
   selectedCard = null;
   deployFaceDown = false;
   document.getElementById("btnFaceDown").classList.add("hidden");
-  document.getElementById("btnFaceDown").textContent = "🌑 Hidden Deploy";
+  setFaceDownButtonState(false);
   renderHand(gameState?.myHand);
   renderBoard(gameState);
 }
@@ -451,10 +482,21 @@ function deployCard(cardId, region, faceDown) {
 document.getElementById("btnFaceDown").addEventListener("click", () => {
   if (!selectedCard) return;
   deployFaceDown = !deployFaceDown;
-  document.getElementById("btnFaceDown").textContent = deployFaceDown
-    ? "✅ Hidden ON — Click Region"
-    : "🌑 Hidden Deploy";
+  setFaceDownButtonState(deployFaceDown);
 });
+
+function setFaceDownButtonState(isActive) {
+  const btn = document.getElementById("btnFaceDown");
+  if (!btn) return;
+  const spans = btn.querySelectorAll("span");
+  if (spans.length < 2) return;
+  const icon = spans[0];
+  const label = spans[1];
+
+  label.textContent = isActive ? "Hidden ON — Click Region" : "Hidden Deploy";
+  icon.classList.toggle("mdi-eye-off", !isActive);
+  icon.classList.toggle("mdi-eye-check", isActive);
+}
 
 document.getElementById("btnWithdraw").addEventListener("click", () => {
   if (
@@ -500,7 +542,11 @@ function showCardInfo(def) {
   document.getElementById("cidImage").src =
     `/image/${def.id}${getImgExt(def.id)}`;
   document.getElementById("cidImage").alt = def.champion;
-  document.getElementById("cidStrength").textContent = `⚔ ${def.strength}`;
+  setElIconText(
+    document.getElementById("cidStrength"),
+    "mdi-sword-cross",
+    String(def.strength),
+  );
   document.getElementById("cidName").textContent = def.champion;
 
   const regionIcon = document.getElementById("cidRegionIcon");
@@ -582,7 +628,11 @@ function openAbilityModal(ability, customLabel) {
       const top = ability.topCard;
       desc.textContent = `Top card: ${top.champion} (${top.region}, STR ${top.strength}). Deploy facedown to an adjacent region?`;
       for (const r of adjacentRegions("Noxus")) {
-        const btn = mkModalOption(r, "📍 " + r, "Deploy facedown here");
+        const btn = mkModalOption(
+          r,
+          `<span class="mdi mdi-map-marker ui-icon" aria-hidden="true"></span>&nbsp;${r}`,
+          "Deploy facedown here",
+        );
         btn.addEventListener("click", () => {
           socket.emit("abilityResponse", { deploy: true, regionName: r });
           closeModal();
@@ -632,7 +682,11 @@ function openAbilityModal(ability, customLabel) {
             desc.textContent = `Move ${def.champion} to which region?`;
             for (const dr of REGIONS) {
               if (dr === r) continue;
-              const d = mkModalOption(dr, "📍 " + dr, "Move here");
+              const d = mkModalOption(
+                dr,
+                `<span class="mdi mdi-map-marker ui-icon" aria-hidden="true"></span>&nbsp;${dr}`,
+                "Move here",
+              );
               d.addEventListener("click", () => {
                 socket.emit("abilityResponse", {
                   cardId: pickedCard,
@@ -729,7 +783,10 @@ function mkBtn(label, cls, onClick) {
 // ─── Win Screen ────────────────────────────────────────────────────────────
 function showWinScreen(iWon) {
   const win = document.getElementById("winOverlay");
-  document.getElementById("winTrophy").textContent = iWon ? "🏆" : "💀";
+  const trophy = document.getElementById("winTrophy");
+  trophy.textContent = "";
+  trophy.classList.toggle("mdi-trophy", iWon);
+  trophy.classList.toggle("mdi-skull", !iWon);
   document.getElementById("winTitle").textContent = iWon
     ? "Victory!"
     : "Defeated!";
@@ -770,7 +827,11 @@ function showToast(msg, isError = false) {
   if (old) old.remove();
   const t = document.createElement("div");
   t.className = "toast";
-  t.textContent = msg;
+  if (isError) {
+    t.appendChild(makeMdiIcon("mdi-alert-circle-outline"));
+    t.appendChild(document.createTextNode(" "));
+  }
+  t.appendChild(document.createTextNode(msg));
   if (isError) t.style.borderColor = "rgba(231,76,60,0.6)";
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3100);
