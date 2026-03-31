@@ -23,6 +23,68 @@ function setElIconText(el, iconClass, text) {
   el.appendChild(document.createTextNode(text));
 }
 
+// ─── Emoji Reactions ──────────────────────────────────────────────────────
+const EMOJI_REACTIONS = {
+  haha: "😂",
+  like: "👍",
+  sad: "😢",
+};
+const EMOJI_COOLDOWN_MS = 1200;
+let emojiCooldownUntil = 0;
+
+function initEmojiBar() {
+  const bar = document.getElementById("emojiBar");
+  if (!bar) return;
+  bar.querySelectorAll(".emoji-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const key = btn.getAttribute("data-emoji");
+      sendEmojiReaction(key);
+    });
+  });
+}
+
+function setEmojiBarDisabled(disabled) {
+  const bar = document.getElementById("emojiBar");
+  if (!bar) return;
+  bar.querySelectorAll(".emoji-btn").forEach((btn) => {
+    btn.disabled = disabled;
+  });
+}
+
+function sendEmojiReaction(key) {
+  if (!key || !EMOJI_REACTIONS[key]) return;
+
+  const now = Date.now();
+  if (now < emojiCooldownUntil) return;
+
+  emojiCooldownUntil = now + EMOJI_COOLDOWN_MS;
+  setEmojiBarDisabled(true);
+  setTimeout(() => setEmojiBarDisabled(false), EMOJI_COOLDOWN_MS);
+
+  socket.emit("emojiReaction", { emoji: key });
+}
+
+function showEmojiReaction(key) {
+  const layer = document.getElementById("emojiFxLayer");
+  if (!layer) return;
+  const ch = EMOJI_REACTIONS[key];
+  if (!ch) return;
+
+  const el = document.createElement("div");
+  el.className = "emoji-fx";
+  el.textContent = ch;
+  layer.appendChild(el);
+
+  const remove = () => el.remove();
+  el.addEventListener("animationend", remove, { once: true });
+  setTimeout(remove, 1600);
+
+  // Safety cap if many reactions are received at once.
+  while (layer.childElementCount > 6) {
+    layer.firstElementChild?.remove();
+  }
+}
+
 // ─── Room & Player from URL ────────────────────────────────────────────────
 const params = new URLSearchParams(location.search);
 const roomCode = params.get("room") || sessionStorage.getItem("roomCode");
@@ -44,6 +106,8 @@ guideOverlay.addEventListener("click", (e) => {
   if (e.target === guideOverlay) guideOverlay.classList.add("hidden");
 });
 
+initEmojiBar();
+
 // ─── Socket Events ────────────────────────────────────────────────────────
 socket.on("connect", () => {
   console.log("Connected:", socket.id);
@@ -57,6 +121,11 @@ socket.on("gameState", (state) => {
 });
 
 socket.on("actionError", (msg) => showToast(msg, true));
+
+socket.on("emojiReaction", (payload) => {
+  const key = payload && typeof payload.emoji === "string" ? payload.emoji : "";
+  showEmojiReaction(key);
+});
 
 socket.on("opponentLeft", () => {
   showToast("Opponent disconnected.", true);

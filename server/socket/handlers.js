@@ -8,6 +8,10 @@ const {
 } = require("../game/abilities");
 const { advanceTurn, endRound } = require("../game/round");
 
+const ALLOWED_EMOJI_REACTIONS = new Set(["haha", "like", "sad"]);
+const EMOJI_RATE_WINDOW_MS = 5000;
+const EMOJI_RATE_MAX = 3;
+
 function registerSocketHandlers(io, roomManager) {
   const { rooms } = roomManager;
 
@@ -39,6 +43,31 @@ function registerSocketHandlers(io, roomManager) {
       io.to(code).emit("gameStarted", { code });
       roomManager.broadcastState(code);
       console.log(`Room ${code} — game started`);
+    });
+
+    // EMOJI REACTIONS (non-gameplay)
+    socket.on("emojiReaction", (payload) => {
+      const found = roomManager.getRoomOfSocket(socket.id);
+      if (!found) return;
+
+      const emojiRaw =
+        payload && typeof payload.emoji === "string" ? payload.emoji : "";
+      const emoji = emojiRaw.trim().toLowerCase();
+      if (!ALLOWED_EMOJI_REACTIONS.has(emoji)) return;
+
+      // Rate limit per-socket: allow a small burst, prevent spamming.
+      const now = Date.now();
+      const windowStart = now - EMOJI_RATE_WINDOW_MS;
+      socket.data.emojiReactionTimes = (socket.data.emojiReactionTimes || [])
+        .filter((t) => t > windowStart)
+        .slice(-EMOJI_RATE_MAX);
+
+      if (socket.data.emojiReactionTimes.length >= EMOJI_RATE_MAX) return;
+      socket.data.emojiReactionTimes.push(now);
+
+      const { code, room } = found;
+      const pIdx = roomManager.playerIndexOf(room, socket.id);
+      io.to(code).emit("emojiReaction", { emoji, fromPlayer: pIdx });
     });
 
     // PLAY CARD
