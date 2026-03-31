@@ -291,12 +291,21 @@ function buildBoardCard(c, playerIdx, region, s, isUncovered) {
       (playerIdx !== myIndex ? " opponent-card" : "");
     card.innerHTML = `
       <div class="card-face-top">
-        <span class="card-name">${def.champion}</span>
+        <div class="card-name-row">
+          <span class="card-name">${def.champion}</span>
+          ${
+            def.type === "Instant"
+              ? '<span class="card-type-icon" title="Instant">⚡</span>'
+              : def.type === "Ongoing"
+                ? '<span class="card-type-icon" title="Ongoing">⏳</span>'
+                : ""
+          }
+        </div>
         <span class="card-str">&#9876; ${def.strength}</span>
       </div>
       <img src="/image/${c.id}${getImgExt(c.id)}" alt="${def.champion}"
            onerror="this.style.display='none'" />
-      ${def.type !== "None" ? `<span class="card-type-badge type-${def.type} card-type-corner">${def.type}</span>` : ""}
+      <img src="/image/Icon_${def.region}.webp" class="card-region-corner" alt="${def.region}" onerror="this.style.display='none'">
     `;
 
     // Hover → show card info in sidebar
@@ -395,7 +404,10 @@ function renderHand(hand) {
       <div class="card-info">
         <span class="c-str">${card.strength}</span>
         <div class="c-name">${card.champion}</div>
-        <div class="c-region">${card.region}</div>
+        <div class="c-region">
+          <img src="/image/Icon_${card.region}.webp" class="c-region-icon" alt="${card.region}" onerror="this.style.display='none'">
+          <span>${card.region}</span>
+        </div>
       </div>
     `;
 
@@ -490,6 +502,17 @@ function showCardInfo(def) {
   document.getElementById("cidImage").alt = def.champion;
   document.getElementById("cidStrength").textContent = `⚔ ${def.strength}`;
   document.getElementById("cidName").textContent = def.champion;
+
+  const regionIcon = document.getElementById("cidRegionIcon");
+  if (regionIcon) {
+    if (def.region) {
+      regionIcon.src = `/image/Icon_${def.region}.webp`;
+      regionIcon.alt = def.region;
+      regionIcon.style.display = "";
+    } else {
+      regionIcon.style.display = "none";
+    }
+  }
 
   const regionBadge = document.getElementById("cidRegionBadge");
   regionBadge.textContent = def.region;
