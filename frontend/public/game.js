@@ -1104,7 +1104,7 @@ function getCardDef(id) {
 
 const IMG_EXT = {
   N1: "jpg",
-  N2: "png",
+  N2: "jpg",
   N3: "png",
   N4: "png",
   N5: "png",
