@@ -37,6 +37,15 @@ function setRoomPlayerDisplayName(room, playerIdx, rawName) {
   room.playerDisplayNames[playerIdx] = sanitized;
 }
 
+function setRoomPlayerElo(room, playerIdx, elo) {
+  if (!room || (playerIdx !== 0 && playerIdx !== 1)) return;
+  const n =
+    typeof elo === "number" && Number.isFinite(elo) ? Math.round(elo) : null;
+  if (n === null) return;
+  room.playerElos = room.playerElos || [null, null];
+  room.playerElos[playerIdx] = n;
+}
+
 function registerSocketHandlers(io, roomManager) {
   const { rooms } = roomManager;
 
@@ -95,6 +104,11 @@ function registerSocketHandlers(io, roomManager) {
 
     setRoomPlayerDisplayName(room, 0, nameA);
     setRoomPlayerDisplayName(room, 1, nameB);
+
+    if (sockA.data && sockA.data.profileStats)
+      setRoomPlayerElo(room, 0, sockA.data.profileStats.elo);
+    if (sockB.data && sockB.data.profileStats)
+      setRoomPlayerElo(room, 1, sockB.data.profileStats.elo);
 
     room.matchStartedAtMs = Date.now();
     room.matchRecorded = false;
@@ -433,6 +447,7 @@ function registerSocketHandlers(io, roomManager) {
 
         // Cached server-authoritative profile display name for authenticated accounts.
         socket.data.profileDisplayName = null;
+        socket.data.profileStats = null;
 
         // Best-effort: create/update the server-backed player profile.
         // Guests (anonymous) must not trigger server persistence.
@@ -447,6 +462,7 @@ function registerSocketHandlers(io, roomManager) {
             ) {
               socket.data.profileDisplayName = me.displayName.trim();
             }
+            if (me && me.stats) socket.data.profileStats = me.stats;
           } catch {
             // ignore
           }
@@ -455,7 +471,7 @@ function registerSocketHandlers(io, roomManager) {
         // If the socket is already associated with a room, attach the UID.
         const found = roomManager.getRoomOfSocket(socket.id);
         if (found) {
-          const { room } = found;
+          const { code, room } = found;
           const pIdx = roomManager.playerIndexOf(room, socket.id);
           if (!isAnonymous) {
             setRoomPlayerUid(room, pIdx, decoded.uid);
@@ -469,6 +485,17 @@ function registerSocketHandlers(io, roomManager) {
               socket.data.profileDisplayName,
             );
           }
+          if (
+            room.mode === "ranked" &&
+            !isAnonymous &&
+            socket.data.profileStats &&
+            typeof socket.data.profileStats.elo === "number"
+          ) {
+            setRoomPlayerElo(room, pIdx, socket.data.profileStats.elo);
+          }
+
+          // Push updated identity/stats into the game view ASAP.
+          roomManager.broadcastState(code);
         }
 
         socket.emit("authOk", {
@@ -479,6 +506,7 @@ function registerSocketHandlers(io, roomManager) {
       } catch (err) {
         delete socket.data.firebaseUser;
         delete socket.data.profileDisplayName;
+        delete socket.data.profileStats;
         socket.emit("authError", "Auth failed.");
       }
     });
@@ -488,6 +516,7 @@ function registerSocketHandlers(io, roomManager) {
     socket.on("clearAuth", () => {
       delete socket.data.firebaseUser;
       delete socket.data.profileDisplayName;
+      delete socket.data.profileStats;
 
       // If this socket was queued for ranked, remove it.
       removeFromRankedQueue(socket.id);
@@ -972,6 +1001,13 @@ function registerSocketHandlers(io, roomManager) {
         if (socket.data.firebaseUser && socket.data.firebaseUser.uid) {
           if (socket.data.firebaseUser.isAnonymous === false)
             setRoomPlayerUid(room, playerIndex, socket.data.firebaseUser.uid);
+        }
+        if (
+          room.mode === "ranked" &&
+          socket.data.profileStats &&
+          typeof socket.data.profileStats.elo === "number"
+        ) {
+          setRoomPlayerElo(room, playerIndex, socket.data.profileStats.elo);
         }
         roomManager.broadcastState(code);
         refreshTurnTimer(code, room);

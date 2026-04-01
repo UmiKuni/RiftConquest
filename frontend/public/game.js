@@ -258,6 +258,16 @@ function render() {
 
   // Player display names (server-sanitized; render via textContent)
   const names = Array.isArray(s.playerDisplayNames) ? s.playerDisplayNames : [];
+  const isRanked = s.mode === "ranked";
+  const elos = isRanked && Array.isArray(s.playerElos) ? s.playerElos : [];
+  const myElo =
+    typeof elos[myIndex] === "number" && Number.isFinite(elos[myIndex])
+      ? Math.round(elos[myIndex])
+      : null;
+  const oppElo =
+    typeof elos[1 - myIndex] === "number" && Number.isFinite(elos[1 - myIndex])
+      ? Math.round(elos[1 - myIndex])
+      : null;
   const myName =
     typeof names[myIndex] === "string" && names[myIndex].trim()
       ? names[myIndex]
@@ -266,10 +276,14 @@ function render() {
     typeof names[1 - myIndex] === "string" && names[1 - myIndex].trim()
       ? names[1 - myIndex]
       : "Opponent";
+  const myLabel =
+    isRanked && myElo !== null ? `${myName} · ELO ${myElo}` : myName;
+  const oppLabel =
+    isRanked && oppElo !== null ? `${oppName} · ELO ${oppElo}` : oppName;
   const myLabelEl = document.querySelector("#myScoreBlock .player-label");
   const oppLabelEl = document.querySelector("#oppScoreBlock .player-label");
-  if (myLabelEl) myLabelEl.textContent = myName;
-  if (oppLabelEl) oppLabelEl.textContent = oppName;
+  if (myLabelEl) myLabelEl.textContent = myLabel;
+  if (oppLabelEl) oppLabelEl.textContent = oppLabel;
 
   // Scores & Round
   document.getElementById("myVP").textContent = s.scores[myIndex];
@@ -1028,11 +1042,7 @@ function showWinScreen(iWon) {
     : `Opponent reached ${gameState.scores[1 - myIndex]} VP. Don't give up.`;
 
   if (gameState.surrender) {
-    if (iWon) {
-      desc = `Opponent Surrendered! You gain roughly +15 ELO (feature coming soon).`;
-    } else {
-      desc = `You Surrendered. You lose roughly -15 ELO (feature coming soon).`;
-    }
+    desc = iWon ? "Opponent surrendered!" : "You surrendered.";
   }
 
   document.getElementById("winDesc").textContent = desc;
@@ -1044,9 +1054,12 @@ document.getElementById("btnRsContinue").addEventListener("click", () => {
     socket.emit("readyForNextRound");
 });
 document.getElementById("btnRsSurrender").addEventListener("click", () => {
+  const isRanked = !!(gameState && gameState.mode === "ranked");
   if (
     confirm(
-      "Are you sure you want to surrender the entire game? You will lose ELO!",
+      isRanked
+        ? "Are you sure you want to surrender the entire game? You will lose ELO!"
+        : "Are you sure you want to surrender the entire game?",
     )
   ) {
     socket.emit("surrenderMatch");

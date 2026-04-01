@@ -14,6 +14,7 @@ function createRoomManager(io) {
       players: [hostSocketId, null],
       playerUids: [null, null],
       playerDisplayNames: [null, null],
+      playerElos: [null, null],
       state: null,
       disconnectTimers: {},
       matchStartedAtMs: null,
@@ -61,6 +62,10 @@ function createRoomManager(io) {
         opponentHandCount: room.state.hands[oppIdx].length,
         scores: room.state.scores,
         playerDisplayNames,
+        mode: room.mode,
+        ...(room.mode === "ranked" && Array.isArray(room.playerElos)
+          ? { playerElos: room.playerElos }
+          : {}),
       };
 
       // Never send hidden info

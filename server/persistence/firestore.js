@@ -78,6 +78,27 @@ function decodeCursor(cursorStr) {
   }
 }
 
+function decodeMatchHistoryCursor(cursorStr) {
+  if (!cursorStr || typeof cursorStr !== "string") return null;
+
+  const normalized = cursorStr.replace(/-/g, "+").replace(/_/g, "/");
+  const padLen = (4 - (normalized.length % 4)) % 4;
+  const padded = normalized + "=".repeat(padLen);
+
+  try {
+    const json = Buffer.from(padded, "base64").toString("utf8");
+    const obj = JSON.parse(json);
+    if (!obj || typeof obj !== "object") return null;
+
+    const matchId = asNonEmptyString(obj.matchId);
+    if (!matchId) return null;
+
+    return { matchId };
+  } catch {
+    return null;
+  }
+}
+
 function sanitizeDisplayName(raw) {
   if (typeof raw !== "string") return null;
   let name = raw.trim().replace(/\s+/g, " ");
@@ -518,21 +539,36 @@ async function getMe(uid) {
   };
 }
 
-async function getMatchHistory(uid, { limit = 10 } = {}) {
-  if (!uid || typeof uid !== "string") return [];
+async function getMatchHistory(uid, { limit = 10, cursor = null } = {}) {
+  if (!uid || typeof uid !== "string") return { items: [], nextCursor: null };
 
   const size = Math.max(1, Math.min(50, Math.floor(asNumber(limit, 10))));
+  const decodedCursor = decodeMatchHistoryCursor(cursor);
 
   const db = getFirestore();
-  const snap = await db
-    .collection("users")
-    .doc(uid)
-    .collection("matchHistory")
-    .orderBy("endedAt", "desc")
-    .limit(size)
-    .get();
+  const col = db.collection("users").doc(uid).collection("matchHistory");
 
-  return snap.docs.map((doc) => {
+  let startAfterSnap = null;
+  if (decodedCursor && decodedCursor.matchId) {
+    const snap = await col.doc(decodedCursor.matchId).get();
+    if (snap.exists) startAfterSnap = snap;
+  }
+
+  let q = col.orderBy("endedAt", "desc");
+  if (startAfterSnap) q = q.startAfter(startAfterSnap);
+
+  // Fetch 1 extra doc so we can tell if there's another page.
+  const snap = await q.limit(size + 1).get();
+  const docs = snap.docs || [];
+
+  const pageDocs = docs.slice(0, size);
+  const hasMore = docs.length > size;
+  const nextCursor =
+    hasMore && pageDocs.length
+      ? encodeCursor({ matchId: pageDocs[pageDocs.length - 1].id })
+      : null;
+
+  const items = pageDocs.map((doc) => {
     const data = doc.data() || {};
     const endedAtMs = toMillis(data.endedAt);
 
@@ -556,6 +592,8 @@ async function getMatchHistory(uid, { limit = 10 } = {}) {
       roomCode: asNonEmptyString(data.roomCode) || null,
     };
   });
+
+  return { items, nextCursor };
 }
 
 async function getLeaderboardPage({ pageSize = 10, cursor = null } = {}) {

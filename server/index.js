@@ -127,10 +127,13 @@ app.get("/api/me/matchHistory", async (req, res) => {
   const limitRaw = req.query.limit;
   const limit = typeof limitRaw === "string" ? Number(limitRaw) : undefined;
 
+  const cursorRaw = req.query.cursor;
+  const cursor = typeof cursorRaw === "string" ? cursorRaw : null;
+
   try {
     await upsertUserFromDecoded(decoded);
-    const items = await getMatchHistory(decoded.uid, { limit });
-    res.json({ items });
+    const result = await getMatchHistory(decoded.uid, { limit, cursor });
+    res.json(result);
   } catch (err) {
     console.warn("[api] /api/me/matchHistory failed:", err && err.message);
     res.status(500).json({ error: "Failed to load match history." });
