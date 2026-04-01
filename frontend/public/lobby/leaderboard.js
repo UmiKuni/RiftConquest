@@ -74,6 +74,8 @@
 
       const row = document.createElement("div");
       row.className = "leaderboard-row";
+      if (rank === 1) row.classList.add("top1");
+      else if (rank === 2) row.classList.add("top2");
 
       const rankEl = document.createElement("div");
       rankEl.className = "leaderboard-rank cinzel";

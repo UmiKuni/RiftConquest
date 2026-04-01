@@ -841,6 +841,23 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
   border: 1px solid var(--border);
   background: rgba(0, 0, 0, 0.18);
 }
+
+.leaderboard-row.top1 {
+  border-color: var(--border-glow);
+  background: var(--bg-glass);
+}
+.leaderboard-row.top1 .leaderboard-rank,
+.leaderboard-row.top1 .leaderboard-elo {
+  color: var(--gold-dim);
+}
+
+.leaderboard-row.top2 {
+  border-color: var(--gold);
+}
+.leaderboard-row.top2 .leaderboard-rank,
+.leaderboard-row.top2 .leaderboard-elo {
+  color: var(--gold-light);
+}
 .leaderboard-rank {
   width: 2.6rem;
   flex-shrink: 0;
