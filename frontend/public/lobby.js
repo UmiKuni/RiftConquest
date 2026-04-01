@@ -611,14 +611,32 @@ if (btnRankedFind) {
       setAuthMessage("Sign in to play Ranked.", true);
       return;
     }
+    setStatus("");
     setRankedSearching(true);
+    socket.emit("rankedFind");
   });
 }
 if (btnRankedCancel) {
   btnRankedCancel.addEventListener("click", () => {
+    socket.emit("rankedCancel");
     setRankedSearching(false);
   });
 }
+
+// Ranked matchmaking server responses
+socket.on("rankedQueued", () => {
+  // If the server accepted our queue request, ensure the UI is in searching state.
+  if (!rankedSearching) setRankedSearching(true);
+});
+
+socket.on("rankedCanceled", () => {
+  setRankedSearching(false);
+});
+
+socket.on("rankedError", (msg) => {
+  setRankedSearching(false);
+  setStatus(msg || "Ranked unavailable.", true);
+});
 
 // Default tab
 setActiveTab("casual");
@@ -851,8 +869,17 @@ btnJoin.addEventListener("click", () => {
 });
 
 // ─── Game Start ───────────────────────────────────────────────────────────────
-socket.on("gameStarted", ({ code }) => {
-  const myIdx = sessionStorage.getItem("playerIndex") || "0";
+socket.on("gameStarted", ({ code, playerIndex }) => {
+  const idxFromPayload =
+    typeof playerIndex === "number"
+      ? String(playerIndex)
+      : typeof playerIndex === "string" && playerIndex.trim()
+        ? playerIndex.trim()
+        : null;
+
+  const myIdx = idxFromPayload || sessionStorage.getItem("playerIndex") || "0";
+  sessionStorage.setItem("roomCode", code);
+  sessionStorage.setItem("playerIndex", myIdx);
   window.location.href = `/game.html?room=${code}&player=${myIdx}`;
 });
 
