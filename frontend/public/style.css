@@ -97,6 +97,7 @@ body {
    LOBBY PAGE
    ════════════════════════════════════════════════════════════════════════════ */
 .lobby-bg {
+  --bg-glass: rgba(17, 24, 39, 0.72);
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -120,6 +121,16 @@ body {
     var(--bg-deep);
   position: relative;
   overflow: hidden;
+}
+.lobby-bg-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
 }
 .lobby-bg::before {
   content: "";
@@ -152,6 +163,8 @@ body {
       transparent 100%
     );
   animation: shimmer 8s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 1;
 }
 @keyframes shimmer {
   from {
@@ -169,10 +182,10 @@ body {
   padding: 3rem 3.5rem;
   width: min(480px, 92vw);
   text-align: center;
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(10px);
   box-shadow: var(--shadow-glow-gold), var(--shadow-card);
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 .lobby-logo {
   margin-bottom: 0.5rem;
