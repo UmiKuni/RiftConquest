@@ -567,6 +567,7 @@ async function getLeaderboardPage({ pageSize = 10, cursor = null } = {}) {
   const out = [];
   let startAfterSnap = null;
   let nextCursor = null;
+  let hasMore = true;
 
   if (decodedCursor && decodedCursor.uid) {
     const snap = await db
@@ -593,7 +594,7 @@ async function getLeaderboardPage({ pageSize = 10, cursor = null } = {}) {
 
     const snap = await q.get();
     if (snap.empty) {
-      nextCursor = null;
+      hasMore = false;
       break;
     }
 
@@ -602,11 +603,15 @@ async function getLeaderboardPage({ pageSize = 10, cursor = null } = {}) {
 
       const stats = normalizeStats(data.stats);
       const eligible = data.leaderboardEligible !== false;
+      const isAnonymous =
+        data.isAnonymous === true || data.provider === "anonymous";
 
       // Cursor always advances, even if we skip this entry.
       startAfterSnap = doc;
 
       if (!eligible) continue;
+      if (isAnonymous) continue;
+      if (stats.matchTotal < 1) continue;
 
       const displayName =
         asNonEmptyString(data.displayName) || `Player-${doc.id.slice(0, 5)}`;
@@ -624,15 +629,28 @@ async function getLeaderboardPage({ pageSize = 10, cursor = null } = {}) {
       if (out.length >= size) break;
     }
 
+    if (out.length >= size) {
+      const batchLastDoc = snap.docs[snap.docs.length - 1] || null;
+      const stoppedAtBatchEnd =
+        batchLastDoc && startAfterSnap && batchLastDoc.id === startAfterSnap.id;
+
+      // If we filled the page and stopped before the end of this batch,
+      // there are more docs even if the batch is smaller than BATCH_LIMIT.
+      hasMore = !(stoppedAtBatchEnd && snap.size < BATCH_LIMIT);
+      break;
+    }
+
     // If we didn't fill the page but also didn't get a full batch,
     // there are no more docs to scan.
     if (snap.size < BATCH_LIMIT) {
-      nextCursor = null;
+      hasMore = false;
       break;
     }
   }
 
-  if (startAfterSnap) nextCursor = encodeCursor({ uid: startAfterSnap.id });
+  if (hasMore && startAfterSnap) {
+    nextCursor = encodeCursor({ uid: startAfterSnap.id });
+  }
 
   return { items: out, nextCursor };
 }
