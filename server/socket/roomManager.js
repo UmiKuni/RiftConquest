@@ -5,11 +5,12 @@ function createRoomManager(io) {
     return Math.random().toString(36).substring(2, 6).toUpperCase();
   }
 
-  function createRoom(hostSocketId) {
+  function createRoom(hostSocketId, { mode = "casual" } = {}) {
     let code = generateCode();
     while (rooms[code]) code = generateCode();
 
     rooms[code] = {
+      mode,
       players: [hostSocketId, null],
       playerUids: [null, null],
       playerDisplayNames: [null, null],

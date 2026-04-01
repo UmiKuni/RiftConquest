@@ -75,7 +75,7 @@ function registerSocketHandlers(io, roomManager) {
     if (!isRankedEligibleSocket(sockA) || !isRankedEligibleSocket(sockB))
       return;
 
-    const code = roomManager.createRoom(sockA.id);
+    const code = roomManager.createRoom(sockA.id, { mode: "ranked" });
     const room = rooms[code];
     if (!room) return;
 
@@ -365,6 +365,7 @@ function registerSocketHandlers(io, roomManager) {
 
   function maybePersistMatch(code, room) {
     if (!room || !room.state) return;
+    if (room.mode !== "ranked") return;
     if (room.state.phase !== "gameOver") return;
     if (room.matchRecorded || room.matchRecordInProgress) return;
 
@@ -456,8 +457,11 @@ function registerSocketHandlers(io, roomManager) {
         if (found) {
           const { room } = found;
           const pIdx = roomManager.playerIndexOf(room, socket.id);
-          if (!isAnonymous) setRoomPlayerUid(room, pIdx, decoded.uid);
-          else setRoomPlayerUid(room, pIdx, null);
+          if (!isAnonymous) {
+            setRoomPlayerUid(room, pIdx, decoded.uid);
+          } else if (room.mode !== "ranked") {
+            setRoomPlayerUid(room, pIdx, null);
+          }
           if (!isAnonymous && socket.data.profileDisplayName) {
             setRoomPlayerDisplayName(
               room,
@@ -492,7 +496,7 @@ function registerSocketHandlers(io, roomManager) {
       if (found) {
         const { room } = found;
         const pIdx = roomManager.playerIndexOf(room, socket.id);
-        setRoomPlayerUid(room, pIdx, null);
+        if (room.mode !== "ranked") setRoomPlayerUid(room, pIdx, null);
       }
     });
 
