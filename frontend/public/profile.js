@@ -6,6 +6,21 @@ function sanitizeDisplayName(raw) {
   return name;
 }
 
+// Global loading overlay (provided by ui-busy.js). Safe: if missing, no-op.
+const uiBusy = window.uiBusy || null;
+function busyWith(fnOrPromise, message) {
+  if (uiBusy) return uiBusy.withBusy(fnOrPromise, message);
+  return typeof fnOrPromise === "function"
+    ? Promise.resolve().then(fnOrPromise)
+    : Promise.resolve(fnOrPromise);
+}
+function makeInlineSpinner() {
+  const el = document.createElement("span");
+  el.className = "ui-spinner inline";
+  el.setAttribute("aria-hidden", "true");
+  return el;
+}
+
 function isNonAnonymousAccount(user) {
   return !!(user && user.uid && user.isAnonymous === false);
 }
@@ -127,7 +142,17 @@ function renderMatchHistory(items, { emptyMessage = "No matches yet." } = {}) {
   if (!Array.isArray(items) || items.length === 0) {
     const empty = document.createElement("div");
     empty.className = "match-empty";
-    empty.textContent = emptyMessage;
+
+    const isLoading =
+      typeof emptyMessage === "string" &&
+      emptyMessage.toLowerCase().includes("loading");
+    if (isLoading) {
+      empty.appendChild(makeInlineSpinner());
+      empty.appendChild(document.createTextNode(emptyMessage));
+    } else {
+      empty.textContent = emptyMessage;
+    }
+
     list.appendChild(empty);
     return;
   }
@@ -275,48 +300,54 @@ function renderMe(me) {
 let currentUser = null;
 
 async function initForUser(user) {
-  setProfileMessage("");
+  return busyWith(async () => {
+    setProfileMessage("");
+    renderAnalytics(null, []);
 
-  renderAnalytics(null, []);
-
-  if (!isNonAnonymousAccount(user)) {
+    // Block interaction while we validate auth + fetch profile data.
     setDisabled(true);
-    renderMatchHistory([], {
-      emptyMessage: "Please login to view your match history.",
-    });
-    setProfileMessage("Please login to view your profile.", true);
-    return;
-  }
 
-  setDisabled(false);
-
-  renderMatchHistory([], { emptyMessage: "Loading match history…" });
-
-  try {
-    const me = await fetchMe(user);
-    renderMe(me);
-
-    let history = [];
-    let historyFailed = false;
-    try {
-      history = await fetchMatchHistory(user, 20);
-    } catch {
-      history = [];
-      historyFailed = true;
+    if (!isNonAnonymousAccount(user)) {
+      renderMatchHistory([], {
+        emptyMessage: "Please login to view your match history.",
+      });
+      setProfileMessage("Please login to view your profile.", true);
+      return;
     }
 
-    renderMatchHistory(history, {
-      emptyMessage: historyFailed
-        ? "Failed to load match history."
-        : "No matches yet.",
-    });
-    renderAnalytics(me, history);
-  } catch (err) {
-    const msg =
-      err && err.message ? String(err.message) : "Failed to load profile.";
-    setProfileMessage(msg, true);
-    renderMatchHistory([], { emptyMessage: "Failed to load match history." });
-  }
+    renderMatchHistory([], { emptyMessage: "Loading match history…" });
+
+    try {
+      const me = await fetchMe(user);
+      renderMe(me);
+
+      let history = [];
+      let historyFailed = false;
+      try {
+        history = await fetchMatchHistory(user, 20);
+      } catch {
+        history = [];
+        historyFailed = true;
+      }
+
+      renderMatchHistory(history, {
+        emptyMessage: historyFailed
+          ? "Failed to load match history."
+          : "No matches yet.",
+      });
+      renderAnalytics(me, history);
+    } catch (err) {
+      const msg =
+        err && err.message ? String(err.message) : "Failed to load profile.";
+      setProfileMessage(msg, true);
+      renderMatchHistory([], {
+        emptyMessage: "Failed to load match history.",
+      });
+    } finally {
+      // Only re-enable controls for authenticated accounts.
+      setDisabled(false);
+    }
+  }, "Loading profile…");
 }
 
 const btnSave = document.getElementById("btnSaveName");
@@ -337,9 +368,12 @@ if (btnSave) {
       return;
     }
 
-    btnSave.disabled = true;
+    setDisabled(true);
     try {
-      const saved = await saveDisplayName(user, sanitized);
+      const saved = await busyWith(
+        saveDisplayName(user, sanitized),
+        "Saving display name…",
+      );
       if (nameInput) nameInput.value = saved;
       setProfileMessage("Display name updated.");
     } catch (err) {
@@ -349,7 +383,7 @@ if (btnSave) {
           : "Failed to update display name.";
       setProfileMessage(msg, true);
     } finally {
-      btnSave.disabled = false;
+      setDisabled(false);
     }
   });
 }

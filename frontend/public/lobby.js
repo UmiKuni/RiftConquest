@@ -1,5 +1,26 @@
 const socket = io();
 
+// Global loading overlay (provided by ui-busy.js). Safe: if missing, no-op.
+const uiBusy = window.uiBusy || null;
+function busyPush(message) {
+  return uiBusy ? uiBusy.push(message) : null;
+}
+function busyPop(token) {
+  if (uiBusy && token != null) uiBusy.pop(token);
+}
+function busyWith(fnOrPromise, message) {
+  if (uiBusy) return uiBusy.withBusy(fnOrPromise, message);
+  return typeof fnOrPromise === "function"
+    ? Promise.resolve().then(fnOrPromise)
+    : Promise.resolve(fnOrPromise);
+}
+function makeInlineSpinner() {
+  const el = document.createElement("span");
+  el.className = "ui-spinner inline";
+  el.setAttribute("aria-hidden", "true");
+  return el;
+}
+
 const btnHost = document.getElementById("btnHost");
 const btnShowJoin = document.getElementById("btnShowJoin");
 const btnJoin = document.getElementById("btnJoin");
@@ -10,6 +31,30 @@ const roomDisplay = document.getElementById("roomDisplay");
 const roomCodeText = document.getElementById("roomCodeText");
 const codeInput = document.getElementById("codeInput");
 const statusMsg = document.getElementById("statusMsg");
+
+let roomOpBusyToken = null;
+let roomOpBusyTimeout = null;
+
+function clearRoomOpBusy() {
+  if (roomOpBusyTimeout) {
+    clearTimeout(roomOpBusyTimeout);
+    roomOpBusyTimeout = null;
+  }
+  if (roomOpBusyToken != null) {
+    busyPop(roomOpBusyToken);
+    roomOpBusyToken = null;
+  }
+}
+
+function startRoomOpBusy(message) {
+  clearRoomOpBusy();
+  roomOpBusyToken = busyPush(message);
+  // Never permanently block the lobby on a missing socket response.
+  roomOpBusyTimeout = setTimeout(() => {
+    clearRoomOpBusy();
+    setStatus("Request timed out. Please try again.", true);
+  }, 8000);
+}
 
 // ─── Auth UI (Phase 4) ───────────────────────────────────────────────────
 const authMsg = document.getElementById("authMsg");
@@ -243,38 +288,56 @@ async function getIdTokenSafe(user) {
   }
 }
 
+function setAccountSummaryLoading(isLoading) {
+  const loading = !!isLoading;
+  if (btnAccount) btnAccount.disabled = loading;
+  if (loading) setAccountMenuOpen(false);
+
+  if (accountElo && loading) {
+    accountElo.textContent = "";
+    accountElo.appendChild(makeInlineSpinner());
+    accountElo.appendChild(document.createTextNode("…"));
+  }
+}
+
 async function syncAccountProfile(user) {
   if (!isNonAnonymousAccount(user)) return;
-  const token = await getIdTokenSafe(user);
-  if (!token) return;
-
+  setAccountSummaryLoading(true);
   try {
-    const res = await fetch("/api/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    const me = data && data.me ? data.me : null;
-    const name =
-      me && typeof me.displayName === "string"
-        ? sanitizeDisplayName(me.displayName)
-        : "";
-    const elo =
-      me &&
-      me.stats &&
-      typeof me.stats.elo === "number" &&
-      Number.isFinite(me.stats.elo)
-        ? Math.round(me.stats.elo)
-        : null;
+    const token = await getIdTokenSafe(user);
+    if (!token) return;
 
-    if (name) accountSummary.displayName = name;
-    if (elo !== null) accountSummary.elo = elo;
+    try {
+      const res = await fetch("/api/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const me = data && data.me ? data.me : null;
+      const name =
+        me && typeof me.displayName === "string"
+          ? sanitizeDisplayName(me.displayName)
+          : "";
+      const elo =
+        me &&
+        me.stats &&
+        typeof me.stats.elo === "number" &&
+        Number.isFinite(me.stats.elo)
+          ? Math.round(me.stats.elo)
+          : null;
 
+      if (name) accountSummary.displayName = name;
+      if (elo !== null) accountSummary.elo = elo;
+    } catch {
+      // ignore
+    }
+  } finally {
+    setAccountSummaryLoading(false);
+    const name = sanitizeDisplayName(accountSummary.displayName || "");
     if (accountName) accountName.textContent = name || "Player";
     if (accountElo)
-      accountElo.textContent = elo !== null ? String(elo) : "----";
-  } catch {
-    // ignore
+      accountElo.textContent =
+        accountSummary.elo !== null ? String(accountSummary.elo) : "----";
   }
 }
 
@@ -359,7 +422,16 @@ function renderLeaderboardMessage(message) {
 
   const empty = document.createElement("div");
   empty.className = "leaderboard-empty";
-  empty.textContent = message;
+
+  const isLoading =
+    typeof message === "string" && message.toLowerCase().includes("loading");
+  if (isLoading) {
+    empty.appendChild(makeInlineSpinner());
+    empty.appendChild(document.createTextNode(message));
+  } else {
+    empty.textContent = message;
+  }
+
   leaderboardList.appendChild(empty);
 }
 
@@ -659,7 +731,10 @@ if (btnGoogleSignIn) {
 
     try {
       const provider = new firebase.auth.GoogleAuthProvider();
-      await window.firebaseAuth.signInWithPopup(provider);
+      await busyWith(
+        window.firebaseAuth.signInWithPopup(provider),
+        "Signing in…",
+      );
     } catch (err) {
       setAuthMessage(humanizeAuthError(err), true);
     }
@@ -682,7 +757,10 @@ if (btnEmailSignIn) {
     }
 
     try {
-      await window.firebaseAuth.signInWithEmailAndPassword(email, password);
+      await busyWith(
+        window.firebaseAuth.signInWithEmailAndPassword(email, password),
+        "Signing in…",
+      );
     } catch (err) {
       setAuthMessage(humanizeAuthError(err), true);
     }
@@ -705,7 +783,10 @@ if (btnEmailSignUp) {
     }
 
     try {
-      await window.firebaseAuth.createUserWithEmailAndPassword(email, password);
+      await busyWith(
+        window.firebaseAuth.createUserWithEmailAndPassword(email, password),
+        "Creating account…",
+      );
     } catch (err) {
       setAuthMessage(humanizeAuthError(err), true);
     }
@@ -718,9 +799,14 @@ if (btnLogout) {
     if (!window.firebaseAuth) return;
 
     try {
-      await window.firebaseAuth.signOut();
-      // Return to Guest mode immediately.
-      await window.firebaseAuth.signInAnonymously();
+      await busyWith(
+        (async () => {
+          await window.firebaseAuth.signOut();
+          // Return to Guest mode immediately.
+          await window.firebaseAuth.signInAnonymously();
+        })(),
+        "Signing out…",
+      );
     } catch (err) {
       setAuthMessage("Sign out failed.", true);
     }
@@ -814,6 +900,8 @@ if (window.firebaseAuth) {
 
 // ─── Host ────────────────────────────────────────────────────────────────────
 btnHost.addEventListener("click", () => {
+  startRoomOpBusy("Creating room…");
+
   const displayName = getDisplayNameForGame();
   safeSessionStorageSet(DISPLAY_NAME_SESSION_KEY, displayName);
   const user = getFirebaseUser();
@@ -824,6 +912,7 @@ btnHost.addEventListener("click", () => {
 });
 
 socket.on("roomCreated", ({ code }) => {
+  clearRoomOpBusy();
   mainActions.classList.add("hidden");
   joinActions.classList.add("hidden");
   roomDisplay.classList.remove("hidden");
@@ -843,6 +932,7 @@ btnShowJoin.addEventListener("click", () => {
 });
 
 btnCancelJoin.addEventListener("click", () => {
+  clearRoomOpBusy();
   joinActions.classList.add("hidden");
   mainActions.classList.remove("hidden");
   setStatus("");
@@ -856,6 +946,9 @@ btnJoin.addEventListener("click", () => {
   const code = codeInput.value.trim().toUpperCase();
   if (code.length !== 4)
     return setStatus("Please enter a 4-character code.", true);
+
+  startRoomOpBusy("Joining room…");
+
   const displayName = getDisplayNameForGame();
   safeSessionStorageSet(DISPLAY_NAME_SESSION_KEY, displayName);
   const user = getFirebaseUser();
@@ -870,6 +963,7 @@ btnJoin.addEventListener("click", () => {
 
 // ─── Game Start ───────────────────────────────────────────────────────────────
 socket.on("gameStarted", ({ code, playerIndex }) => {
+  clearRoomOpBusy();
   const idxFromPayload =
     typeof playerIndex === "number"
       ? String(playerIndex)
@@ -884,7 +978,10 @@ socket.on("gameStarted", ({ code, playerIndex }) => {
 });
 
 // ─── Errors ───────────────────────────────────────────────────────────────────
-socket.on("joinError", (msg) => setStatus(msg, true));
+socket.on("joinError", (msg) => {
+  clearRoomOpBusy();
+  setStatus(msg, true);
+});
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function setStatus(msg, isError = false) {

@@ -1,6 +1,10 @@
 const socket = io();
 const REGIONS = ["Noxus", "Demacia", "Ionia"];
 
+// Global loading overlay (provided by ui-busy.js). Safe: if missing, no-op.
+const uiBusy = window.uiBusy || null;
+let connectBusyToken = uiBusy ? uiBusy.push("Connecting…") : null;
+
 // Attach Firebase identity (anonymous or logged-in) to this Socket.io connection.
 // Safe: if Firebase isn't available, gameplay continues as before.
 if (window.firebaseAuth) {
@@ -231,10 +235,20 @@ socket.on("connect", () => {
 socket.on("gameState", (state) => {
   gameState = state;
   myIndex = state.myIndex;
+
+  if (connectBusyToken != null && uiBusy) {
+    uiBusy.pop(connectBusyToken);
+    connectBusyToken = null;
+  }
+
   render();
 });
 
 socket.on("joinError", (msg) => {
+  if (connectBusyToken != null && uiBusy) {
+    uiBusy.pop(connectBusyToken);
+    connectBusyToken = null;
+  }
   showToast(msg || "Room error.", true);
   setTimeout(() => (location.href = "/"), 2500);
 });

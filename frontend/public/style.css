@@ -83,6 +83,67 @@ body {
   display: none !important;
 }
 
+/* ─── Global loading overlay (UI busy) ─────────────────────────────────── */
+body.ui-busy-active > :not(#uiBusyOverlay) {
+  pointer-events: none;
+  user-select: none;
+}
+
+.ui-busy-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-deep);
+  backdrop-filter: blur(10px);
+}
+
+.ui-busy-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  max-width: 90vw;
+}
+
+.ui-busy-text {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ui-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--gold);
+  animation: uiSpin 0.9s linear infinite;
+  flex: 0 0 auto;
+}
+
+.ui-spinner.inline {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+  display: inline-block;
+  vertical-align: -0.2em;
+  margin-right: 0.5rem;
+}
+
+@keyframes uiSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .ui-icon {
   display: inline-block;
   line-height: 1;
