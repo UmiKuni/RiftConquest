@@ -17,6 +17,25 @@ const ALLOWED_EMOJI_REACTIONS = new Set(["haha", "like", "sad"]);
 const EMOJI_RATE_WINDOW_MS = 5000;
 const EMOJI_RATE_MAX = 3;
 
+const DISPLAY_NAME_MAX_LEN = 16;
+
+function sanitizeDisplayName(raw) {
+  if (typeof raw !== "string") return "";
+  let name = raw.trim().replace(/\s+/g, " ");
+  name = name.replace(/[^a-zA-Z0-9 _-]/g, "");
+  if (name.length > DISPLAY_NAME_MAX_LEN)
+    name = name.slice(0, DISPLAY_NAME_MAX_LEN);
+  return name;
+}
+
+function setRoomPlayerDisplayName(room, playerIdx, rawName) {
+  if (!room || (playerIdx !== 0 && playerIdx !== 1)) return;
+  const sanitized = sanitizeDisplayName(rawName);
+  if (!sanitized) return;
+  room.playerDisplayNames = room.playerDisplayNames || [null, null];
+  room.playerDisplayNames[playerIdx] = sanitized;
+}
+
 function registerSocketHandlers(io, roomManager) {
   const { rooms } = roomManager;
 
@@ -115,9 +134,16 @@ function registerSocketHandlers(io, roomManager) {
     });
 
     // HOST
-    socket.on("hostRoom", () => {
+    socket.on("hostRoom", (payload) => {
       const code = roomManager.createRoom(socket.id);
       const room = rooms[code];
+      if (room) {
+        const displayName =
+          payload && typeof payload.displayName === "string"
+            ? payload.displayName
+            : "";
+        setRoomPlayerDisplayName(room, 0, displayName);
+      }
       if (room && socket.data.firebaseUser && socket.data.firebaseUser.uid) {
         setRoomPlayerUid(room, 0, socket.data.firebaseUser.uid);
       }
@@ -127,10 +153,20 @@ function registerSocketHandlers(io, roomManager) {
     });
 
     // JOIN
-    socket.on("joinRoom", ({ code }) => {
+    socket.on("joinRoom", (payload) => {
+      const code =
+        payload && typeof payload.code === "string"
+          ? payload.code.trim().toUpperCase()
+          : "";
       const room = rooms[code];
       if (!room) return socket.emit("joinError", "Room not found.");
       if (room.players[1]) return socket.emit("joinError", "Room is full.");
+
+      const displayName =
+        payload && typeof payload.displayName === "string"
+          ? payload.displayName
+          : "";
+      setRoomPlayerDisplayName(room, 1, displayName);
 
       room.players[1] = socket.id;
       if (socket.data.firebaseUser && socket.data.firebaseUser.uid) {
@@ -479,10 +515,30 @@ function registerSocketHandlers(io, roomManager) {
     });
 
     // REJOIN (game.html reconnects after redirect)
-    socket.on("rejoinRoom", ({ code, playerIndex }) => {
+    socket.on("rejoinRoom", (payload) => {
+      const code =
+        payload && typeof payload.code === "string"
+          ? payload.code.trim().toUpperCase()
+          : "";
+      const playerIndexRaw = payload ? payload.playerIndex : null;
+      const playerIndex =
+        typeof playerIndexRaw === "number"
+          ? playerIndexRaw
+          : parseInt(String(playerIndexRaw ?? ""), 10);
+
+      if (playerIndex !== 0 && playerIndex !== 1) {
+        return socket.emit("joinError", "Invalid player index.");
+      }
+
       const room = rooms[code];
       if (!room)
         return socket.emit("joinError", "Room not found (may have expired).");
+
+      const displayName =
+        payload && typeof payload.displayName === "string"
+          ? payload.displayName
+          : "";
+      setRoomPlayerDisplayName(room, playerIndex, displayName);
       // Cancel any pending disconnect timer for this player
       if (room.disconnectTimers?.[playerIndex]) {
         clearTimeout(room.disconnectTimers[playerIndex]);

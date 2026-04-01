@@ -12,6 +12,7 @@ function createRoomManager(io) {
     rooms[code] = {
       players: [hostSocketId, null],
       playerUids: [null, null],
+      playerDisplayNames: [null, null],
       state: null,
       disconnectTimers: {},
       matchStartedAtMs: null,
@@ -43,6 +44,10 @@ function createRoomManager(io) {
     const room = rooms[code];
     if (!room || !room.state) return;
 
+    const playerDisplayNames = Array.isArray(room.playerDisplayNames)
+      ? room.playerDisplayNames
+      : [null, null];
+
     for (let i = 0; i < 2; i++) {
       const socketId = room.players[i];
       if (!socketId) continue;
@@ -54,6 +59,7 @@ function createRoomManager(io) {
         myHand: room.state.hands[i],
         opponentHandCount: room.state.hands[oppIdx].length,
         scores: room.state.scores,
+        playerDisplayNames,
       };
 
       // Never send hidden info

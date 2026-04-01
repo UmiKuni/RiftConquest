@@ -25,6 +25,136 @@ const roomCodeText = document.getElementById("roomCodeText");
 const codeInput = document.getElementById("codeInput");
 const statusMsg = document.getElementById("statusMsg");
 
+// ─── Guest identity (local-only) ─────────────────────────────────────────
+// NOTE: localStorage is shared across tabs. For local 2-tab testing, keep an
+// active per-tab name in sessionStorage and only use localStorage as a default.
+const DISPLAY_NAME_STORAGE_KEY = "rc_displayName";
+const DISPLAY_NAME_SESSION_KEY = "rc_displayName_session";
+const displayNameInput = document.getElementById("displayNameInput");
+
+function safeLocalStorageGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+function safeLocalStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    // ignore
+  }
+}
+
+function safeSessionStorageGet(key) {
+  try {
+    return sessionStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+function safeSessionStorageSet(key, value) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch (e) {
+    // ignore
+  }
+}
+
+function sanitizeDisplayName(raw) {
+  if (typeof raw !== "string") return "";
+  let name = raw.trim().replace(/\s+/g, " ");
+  name = name.replace(/[^a-zA-Z0-9 _-]/g, "");
+  if (name.length > 16) name = name.slice(0, 16);
+  return name;
+}
+
+function generateRandomDisplayName() {
+  const adjectives = [
+    "Brave",
+    "Swift",
+    "Arcane",
+    "Shadow",
+    "Crimson",
+    "Golden",
+    "Frost",
+    "Iron",
+  ];
+  const nouns = [
+    "Fox",
+    "Raven",
+    "Mage",
+    "Knight",
+    "Wolf",
+    "Tiger",
+    "Eagle",
+    "Dragon",
+  ];
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  const num = Math.floor(Math.random() * 90) + 10;
+  return sanitizeDisplayName(`${adj}${noun}${num}`) || "Guest";
+}
+
+function getOrCreateDisplayName() {
+  const fromSession = sanitizeDisplayName(
+    safeSessionStorageGet(DISPLAY_NAME_SESSION_KEY) || "",
+  );
+  if (fromSession) return fromSession;
+
+  const fromLocal = sanitizeDisplayName(
+    safeLocalStorageGet(DISPLAY_NAME_STORAGE_KEY) || "",
+  );
+  if (fromLocal) {
+    safeSessionStorageSet(DISPLAY_NAME_SESSION_KEY, fromLocal);
+    return fromLocal;
+  }
+
+  const generated = generateRandomDisplayName();
+  safeLocalStorageSet(DISPLAY_NAME_STORAGE_KEY, generated);
+  safeSessionStorageSet(DISPLAY_NAME_SESSION_KEY, generated);
+  return generated;
+}
+
+function getCurrentDisplayName() {
+  if (displayNameInput) {
+    const fromInput = sanitizeDisplayName(displayNameInput.value);
+    if (fromInput) {
+      safeSessionStorageSet(DISPLAY_NAME_SESSION_KEY, fromInput);
+      return fromInput;
+    }
+  }
+  return getOrCreateDisplayName();
+}
+
+if (displayNameInput) {
+  displayNameInput.value = getOrCreateDisplayName();
+
+  displayNameInput.addEventListener("input", () => {
+    const sanitized = sanitizeDisplayName(displayNameInput.value);
+    if (sanitized) safeSessionStorageSet(DISPLAY_NAME_SESSION_KEY, sanitized);
+  });
+
+  displayNameInput.addEventListener("blur", () => {
+    const sanitized = sanitizeDisplayName(displayNameInput.value);
+    if (sanitized) {
+      safeSessionStorageSet(DISPLAY_NAME_SESSION_KEY, sanitized);
+      safeLocalStorageSet(DISPLAY_NAME_STORAGE_KEY, sanitized);
+      displayNameInput.value = sanitized;
+      return;
+    }
+    // Restore the previous stored name if the user clears it.
+    displayNameInput.value = getOrCreateDisplayName();
+  });
+
+  displayNameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") displayNameInput.blur();
+  });
+}
+
 // ─── Tabs ───────────────────────────────────────────────────────────────────
 const tabButtons = Array.from(document.querySelectorAll(".lobby-tab"));
 const tabPanels = {
@@ -134,7 +264,10 @@ setActiveTab("casual");
 
 // ─── Host ────────────────────────────────────────────────────────────────────
 btnHost.addEventListener("click", () => {
-  socket.emit("hostRoom");
+  const displayName = getCurrentDisplayName();
+  safeSessionStorageSet(DISPLAY_NAME_SESSION_KEY, displayName);
+  safeLocalStorageSet(DISPLAY_NAME_STORAGE_KEY, displayName);
+  socket.emit("hostRoom", { displayName });
   setStatus("Creating room…");
 });
 
@@ -171,10 +304,13 @@ btnJoin.addEventListener("click", () => {
   const code = codeInput.value.trim().toUpperCase();
   if (code.length !== 4)
     return setStatus("Please enter a 4-character code.", true);
+  const displayName = getCurrentDisplayName();
+  safeSessionStorageSet(DISPLAY_NAME_SESSION_KEY, displayName);
+  safeLocalStorageSet(DISPLAY_NAME_STORAGE_KEY, displayName);
   // Store index=1 BEFORE emitting so gameStarted callback can read it
   sessionStorage.setItem("roomCode", code);
   sessionStorage.setItem("playerIndex", "1");
-  socket.emit("joinRoom", { code });
+  socket.emit("joinRoom", { code, displayName });
   setStatus("Joining room…");
 });
 

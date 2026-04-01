@@ -237,6 +237,30 @@ body {
   margin-top: 0.25rem;
 }
 
+.lobby-profile {
+  margin-top: 1.1rem;
+}
+.profile-label {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.display-name-input {
+  padding: 0.7rem 1rem;
+  font-family: "Inter", sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: none;
+}
+.profile-hint {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
 .lobby-tabs {
   display: flex;
   gap: 0.35rem;

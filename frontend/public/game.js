@@ -21,6 +21,99 @@ let myIndex = null;
 let selectedCard = null;
 let deployFaceDown = false;
 
+// ─── Guest identity (local-only) ─────────────────────────────────────────
+// NOTE: localStorage is shared across tabs. For local 2-tab testing, keep an
+// active per-tab name in sessionStorage and only use localStorage as a default.
+const DISPLAY_NAME_STORAGE_KEY = "rc_displayName";
+const DISPLAY_NAME_SESSION_KEY = "rc_displayName_session";
+
+function safeLocalStorageGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+function safeLocalStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    // ignore
+  }
+}
+
+function safeSessionStorageGet(key) {
+  try {
+    return sessionStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+function safeSessionStorageSet(key, value) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch (e) {
+    // ignore
+  }
+}
+
+function sanitizeDisplayName(raw) {
+  if (typeof raw !== "string") return "";
+  let name = raw.trim().replace(/\s+/g, " ");
+  name = name.replace(/[^a-zA-Z0-9 _-]/g, "");
+  if (name.length > 16) name = name.slice(0, 16);
+  return name;
+}
+
+function generateRandomDisplayName() {
+  const adjectives = [
+    "Brave",
+    "Swift",
+    "Arcane",
+    "Shadow",
+    "Crimson",
+    "Golden",
+    "Frost",
+    "Iron",
+  ];
+  const nouns = [
+    "Fox",
+    "Raven",
+    "Mage",
+    "Knight",
+    "Wolf",
+    "Tiger",
+    "Eagle",
+    "Dragon",
+  ];
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  const num = Math.floor(Math.random() * 90) + 10;
+  return sanitizeDisplayName(`${adj}${noun}${num}`) || "Guest";
+}
+
+function getOrCreateDisplayName() {
+  const fromSession = sanitizeDisplayName(
+    safeSessionStorageGet(DISPLAY_NAME_SESSION_KEY) || "",
+  );
+  if (fromSession) return fromSession;
+
+  const fromLocal = sanitizeDisplayName(
+    safeLocalStorageGet(DISPLAY_NAME_STORAGE_KEY) || "",
+  );
+  if (fromLocal) {
+    safeSessionStorageSet(DISPLAY_NAME_SESSION_KEY, fromLocal);
+    return fromLocal;
+  }
+
+  const generated = generateRandomDisplayName();
+  safeLocalStorageSet(DISPLAY_NAME_STORAGE_KEY, generated);
+  safeSessionStorageSet(DISPLAY_NAME_SESSION_KEY, generated);
+  return generated;
+}
+
 function makeMdiIcon(iconClass, extraClass = "") {
   const el = document.createElement("span");
   el.className = `mdi ${iconClass} ui-icon${extraClass ? " " + extraClass : ""}`;
@@ -125,7 +218,11 @@ initEmojiBar();
 // ─── Socket Events ────────────────────────────────────────────────────────
 socket.on("connect", () => {
   console.log("Connected:", socket.id);
-  socket.emit("rejoinRoom", { code: roomCode, playerIndex });
+  socket.emit("rejoinRoom", {
+    code: roomCode,
+    playerIndex,
+    displayName: getOrCreateDisplayName(),
+  });
 });
 
 socket.on("gameState", (state) => {
@@ -150,6 +247,21 @@ socket.on("opponentLeft", () => {
 function render() {
   if (!gameState) return;
   const s = gameState;
+
+  // Player display names (server-sanitized; render via textContent)
+  const names = Array.isArray(s.playerDisplayNames) ? s.playerDisplayNames : [];
+  const myName =
+    typeof names[myIndex] === "string" && names[myIndex].trim()
+      ? names[myIndex]
+      : "You";
+  const oppName =
+    typeof names[1 - myIndex] === "string" && names[1 - myIndex].trim()
+      ? names[1 - myIndex]
+      : "Opponent";
+  const myLabelEl = document.querySelector("#myScoreBlock .player-label");
+  const oppLabelEl = document.querySelector("#oppScoreBlock .player-label");
+  if (myLabelEl) myLabelEl.textContent = myName;
+  if (oppLabelEl) oppLabelEl.textContent = oppName;
 
   // Scores & Round
   document.getElementById("myVP").textContent = s.scores[myIndex];
