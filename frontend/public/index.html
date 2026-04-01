@@ -31,57 +31,167 @@
           <p class="subtitle">Battle for the Rift · 2 Players</p>
         </div>
 
-        <div class="lobby-divider"><span>ENTER THE RIFT</span></div>
-
-        <!-- Default action buttons -->
-        <div class="lobby-actions" id="mainActions">
-          <button class="btn btn-primary" id="btnHost">
-            <span class="mdi mdi-castle ui-icon" aria-hidden="true"></span
-            ><span>Host Room</span>
+        <div class="lobby-tabs" role="tablist" aria-label="Lobby tabs">
+          <button
+            class="lobby-tab active"
+            id="tabBtnCasual"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="tabCasual"
+            data-tab="casual"
+          >
+            Casual
           </button>
-          <button class="btn btn-secondary" id="btnShowJoin">
-            <span class="mdi mdi-sword-cross ui-icon" aria-hidden="true"></span
-            ><span>Join Room</span>
+          <button
+            class="lobby-tab"
+            id="tabBtnRanked"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="tabRanked"
+            data-tab="ranked"
+          >
+            Ranked
           </button>
         </div>
 
-        <!-- Join form (hidden by default) -->
-        <div class="lobby-actions hidden" id="joinActions">
-          <div class="join-form">
-            <input
-              id="codeInput"
-              class="input-field"
-              type="text"
-              maxlength="4"
-              placeholder="Enter room code"
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <button class="btn btn-primary" id="btnJoin">
+        <!-- CASUAL: host/join by code (guests allowed) -->
+        <div
+          class="lobby-tab-panel"
+          id="tabCasual"
+          role="tabpanel"
+          aria-labelledby="tabBtnCasual"
+        >
+          <div class="lobby-divider"><span>CASUAL · HOST OR JOIN</span></div>
+
+          <!-- Default action buttons -->
+          <div class="lobby-actions" id="mainActions">
+            <button class="btn btn-primary" id="btnHost">
+              <span class="mdi mdi-castle ui-icon" aria-hidden="true"></span
+              ><span>Host Room</span>
+            </button>
+            <button class="btn btn-secondary" id="btnShowJoin">
               <span
                 class="mdi mdi-sword-cross ui-icon"
                 aria-hidden="true"
               ></span
-              ><span>Join Battle</span>
+              ><span>Join Room</span>
             </button>
-            <button class="btn btn-secondary" id="btnCancelJoin">← Back</button>
+          </div>
+
+          <!-- Join form (hidden by default) -->
+          <div class="lobby-actions hidden" id="joinActions">
+            <div class="join-form">
+              <input
+                id="codeInput"
+                class="input-field"
+                type="text"
+                maxlength="4"
+                placeholder="Enter room code"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button class="btn btn-primary" id="btnJoin">
+                <span
+                  class="mdi mdi-sword-cross ui-icon"
+                  aria-hidden="true"
+                ></span
+                ><span>Join Battle</span>
+              </button>
+              <button class="btn btn-secondary" id="btnCancelJoin">
+                ← Back
+              </button>
+            </div>
+          </div>
+
+          <!-- Room code display (after hosting) -->
+          <div class="room-code-display hidden" id="roomDisplay">
+            <p class="label">Room Code</p>
+            <p class="code" id="roomCodeText">----</p>
+            <p class="hint">
+              Share this code with your opponent.<br /><span
+                class="waiting-pulse mdi mdi-timer-sand ui-icon"
+                aria-hidden="true"
+              ></span>
+              Waiting for opponent to join…
+            </p>
           </div>
         </div>
 
-        <!-- Room code display (after hosting) -->
-        <div class="room-code-display hidden" id="roomDisplay">
-          <p class="label">Room Code</p>
-          <p class="code" id="roomCodeText">----</p>
-          <p class="hint">
-            Share this code with your opponent.<br /><span
-              class="waiting-pulse mdi mdi-timer-sand ui-icon"
-              aria-hidden="true"
-            ></span>
-            Waiting for opponent to join…
+        <!-- RANKED: matchmaking (accounts only; queue wired later) -->
+        <div
+          class="lobby-tab-panel hidden"
+          id="tabRanked"
+          role="tabpanel"
+          aria-labelledby="tabBtnRanked"
+        >
+          <div class="lobby-divider"><span>RANKED · MATCHMAKING</span></div>
+
+          <p class="lobby-note">
+            Ranked is for authenticated accounts. Casual is always available.
           </p>
+
+          <div class="lobby-actions">
+            <button class="btn btn-primary" id="btnRankedFind">
+              <span
+                class="mdi mdi-shield-sword ui-icon"
+                aria-hidden="true"
+              ></span>
+              <span>Find Match</span>
+            </button>
+            <button class="btn btn-secondary hidden" id="btnRankedCancel">
+              <span class="mdi mdi-close ui-icon" aria-hidden="true"></span>
+              <span>Cancel Search</span>
+            </button>
+          </div>
+
+          <div class="room-code-display hidden" id="rankedQueueStatus">
+            <p class="label">Ranked Queue</p>
+            <p class="hint">
+              <span
+                class="waiting-pulse mdi mdi-timer-sand ui-icon"
+                aria-hidden="true"
+              ></span>
+              Searching for an opponent…
+              <span class="queue-timer" id="rankedQueueTimer">00:00</span>
+            </p>
+          </div>
         </div>
 
         <p class="status-msg" id="statusMsg"></p>
+      </div>
+
+      <!-- Leaderboard: fixed top-right (wired later) -->
+      <div class="lobby-corner" aria-label="Leaderboard">
+        <button
+          class="btn btn-secondary btn-sm"
+          id="btnLeaderboardToggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="leaderboardFlyout"
+        >
+          <span
+            class="mdi mdi-trophy-outline ui-icon"
+            aria-hidden="true"
+          ></span>
+          <span>Leaderboard</span>
+        </button>
+
+        <div class="leaderboard-flyout hidden" id="leaderboardFlyout">
+          <div class="flyout-title">Leaderboard</div>
+          <div class="leaderboard-list" id="leaderboardList">
+            <div class="leaderboard-empty">Leaderboard will appear here.</div>
+          </div>
+          <div class="leaderboard-actions">
+            <button class="btn btn-secondary btn-sm" id="btnLbPrev" disabled>
+              Prev
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btnLbNext" disabled>
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
