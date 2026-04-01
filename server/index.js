@@ -4,7 +4,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
-const { verifyIdToken } = require("./firebaseAdmin");
+const { requireAccountDecoded } = require("./api/auth");
 const {
   upsertUserFromDecoded,
   setUserDisplayName,
@@ -19,12 +19,6 @@ const { registerSocketHandlers } = require("./socket/handlers");
 const app = express();
 
 app.use(express.json());
-
-function getBearerToken(req) {
-  const header = req.headers.authorization || "";
-  const m = /^Bearer\s+(.+)$/i.exec(header);
-  return m ? m[1] : null;
-}
 
 // --- API: server-authoritative persistence ---
 app.get("/api/leaderboard", async (req, res) => {
@@ -43,21 +37,10 @@ app.get("/api/leaderboard", async (req, res) => {
 });
 
 app.get("/api/me", async (req, res) => {
-  const token = getBearerToken(req);
-  if (!token) return res.status(401).json({ error: "Missing auth token." });
-
-  let decoded;
-  try {
-    decoded = await verifyIdToken(token);
-  } catch (err) {
-    return res.status(401).json({ error: "Invalid auth token." });
-  }
-
-  const provider =
-    (decoded.firebase && decoded.firebase.sign_in_provider) || null;
-  if (provider === "anonymous") {
-    return res.status(403).json({ error: "Guest accounts have no profile." });
-  }
+  const decoded = await requireAccountDecoded(req, res, {
+    guestMessage: "Guest accounts have no profile.",
+  });
+  if (!decoded) return;
 
   try {
     await upsertUserFromDecoded(decoded);
@@ -70,23 +53,10 @@ app.get("/api/me", async (req, res) => {
 });
 
 app.post("/api/me/displayName", async (req, res) => {
-  const token = getBearerToken(req);
-  if (!token) return res.status(401).json({ error: "Missing auth token." });
-
-  let decoded;
-  try {
-    decoded = await verifyIdToken(token);
-  } catch (err) {
-    return res.status(401).json({ error: "Invalid auth token." });
-  }
-
-  const provider =
-    (decoded.firebase && decoded.firebase.sign_in_provider) || null;
-  if (provider === "anonymous") {
-    return res
-      .status(403)
-      .json({ error: "Guest accounts cannot set a profile." });
-  }
+  const decoded = await requireAccountDecoded(req, res, {
+    guestMessage: "Guest accounts cannot set a profile.",
+  });
+  if (!decoded) return;
 
   const displayName =
     req.body && typeof req.body.displayName === "string"
@@ -108,21 +78,10 @@ app.post("/api/me/displayName", async (req, res) => {
 });
 
 app.get("/api/me/matchHistory", async (req, res) => {
-  const token = getBearerToken(req);
-  if (!token) return res.status(401).json({ error: "Missing auth token." });
-
-  let decoded;
-  try {
-    decoded = await verifyIdToken(token);
-  } catch (err) {
-    return res.status(401).json({ error: "Invalid auth token." });
-  }
-
-  const provider =
-    (decoded.firebase && decoded.firebase.sign_in_provider) || null;
-  if (provider === "anonymous") {
-    return res.status(403).json({ error: "Guest accounts have no profile." });
-  }
+  const decoded = await requireAccountDecoded(req, res, {
+    guestMessage: "Guest accounts have no profile.",
+  });
+  if (!decoded) return;
 
   const limitRaw = req.query.limit;
   const limit = typeof limitRaw === "string" ? Number(limitRaw) : undefined;

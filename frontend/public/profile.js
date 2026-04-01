@@ -1,29 +1,10 @@
-function sanitizeDisplayName(raw) {
-  if (typeof raw !== "string") return "";
-  let name = raw.trim().replace(/\s+/g, " ");
-  name = name.replace(/[^a-zA-Z0-9 _-]/g, "");
-  if (name.length > 16) name = name.slice(0, 16);
-  return name;
-}
-
-// Global loading overlay (provided by ui-busy.js). Safe: if missing, no-op.
-const uiBusy = window.uiBusy || null;
-function busyWith(fnOrPromise, message) {
-  if (uiBusy) return uiBusy.withBusy(fnOrPromise, message);
-  return typeof fnOrPromise === "function"
-    ? Promise.resolve().then(fnOrPromise)
-    : Promise.resolve(fnOrPromise);
-}
-function makeInlineSpinner() {
-  const el = document.createElement("span");
-  el.className = "ui-spinner inline";
-  el.setAttribute("aria-hidden", "true");
-  return el;
-}
-
-function isNonAnonymousAccount(user) {
-  return !!(user && user.uid && user.isAnonymous === false);
-}
+const {
+  sanitizeDisplayName,
+  busyWith,
+  makeInlineSpinner,
+  isNonAnonymousAccount,
+  getIdTokenSafe,
+} = window.rcShared;
 
 function setProfileMessage(msg, isError = false) {
   const el = document.getElementById("profileMsg");
@@ -37,15 +18,6 @@ function setProfileMessage(msg, isError = false) {
   el.textContent = msg;
   el.classList.toggle("error", !!isError);
   el.classList.remove("hidden");
-}
-
-async function getIdTokenSafe(user) {
-  if (!user) return null;
-  try {
-    return await user.getIdToken();
-  } catch {
-    return null;
-  }
 }
 
 async function fetchMe(user) {
