@@ -78,6 +78,80 @@ function decodeCursor(cursorStr) {
   }
 }
 
+function sanitizeDisplayName(raw) {
+  if (typeof raw !== "string") return null;
+  let name = raw.trim().replace(/\s+/g, " ");
+  name = name.replace(/[^a-zA-Z0-9 _-]/g, "");
+  if (!name) return null;
+  if (name.length > 16) name = name.slice(0, 16);
+  return name;
+}
+
+function toMillis(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value.toDate === "function") {
+    const d = value.toDate();
+    return d instanceof Date ? d.getTime() : null;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  return null;
+}
+
+async function setUserDisplayName(uid, displayName) {
+  if (!uid || typeof uid !== "string") throw new Error("Missing uid.");
+  const sanitized = sanitizeDisplayName(displayName);
+  if (!sanitized) throw new Error("Invalid display name.");
+
+  const db = getFirestore();
+  const admin = getAdmin();
+  const now = admin.firestore.FieldValue.serverTimestamp();
+
+  const userRef = db.collection("users").doc(uid);
+  const publicRef = db.collection("publicUsers").doc(uid);
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(userRef);
+
+    if (!snap.exists) {
+      tx.set(
+        userRef,
+        {
+          createdAt: now,
+          displayName: sanitized,
+          stats: { ...DEFAULT_STATS },
+        },
+        { merge: true },
+      );
+    }
+
+    const existing = snap.exists ? snap.data() : null;
+    const stats = normalizeStats(existing && existing.stats);
+
+    tx.set(
+      userRef,
+      {
+        updatedAt: now,
+        displayName: sanitized,
+      },
+      { merge: true },
+    );
+
+    tx.set(
+      publicRef,
+      {
+        updatedAt: now,
+        displayName: sanitized,
+        leaderboardEligible: true,
+        stats,
+      },
+      { merge: true },
+    );
+  });
+
+  return sanitized;
+}
+
 async function upsertUserFromDecoded(decoded) {
   if (!decoded || typeof decoded.uid !== "string" || !decoded.uid) return;
 
@@ -444,6 +518,46 @@ async function getMe(uid) {
   };
 }
 
+async function getMatchHistory(uid, { limit = 10 } = {}) {
+  if (!uid || typeof uid !== "string") return [];
+
+  const size = Math.max(1, Math.min(50, Math.floor(asNumber(limit, 10))));
+
+  const db = getFirestore();
+  const snap = await db
+    .collection("users")
+    .doc(uid)
+    .collection("matchHistory")
+    .orderBy("endedAt", "desc")
+    .limit(size)
+    .get();
+
+  return snap.docs.map((doc) => {
+    const data = doc.data() || {};
+    const endedAtMs = toMillis(data.endedAt);
+
+    const scores =
+      Array.isArray(data.scores) && data.scores.length === 2
+        ? [asNumber(data.scores[0], 0), asNumber(data.scores[1], 0)]
+        : null;
+
+    return {
+      matchId: asNonEmptyString(data.matchId) || doc.id,
+      endedAtMs,
+      opponentUid: asNonEmptyString(data.opponentUid) || null,
+      opponentName: asNonEmptyString(data.opponentName) || null,
+      result: asNonEmptyString(data.result) || null,
+      eloBefore: asNumber(data.eloBefore, null),
+      eloAfter: asNumber(data.eloAfter, null),
+      delta: asNumber(data.delta, null),
+      scores,
+      endReason: asNonEmptyString(data.endReason) || null,
+      surrendered: !!data.surrendered,
+      roomCode: asNonEmptyString(data.roomCode) || null,
+    };
+  });
+}
+
 async function getLeaderboardPage({ pageSize = 10, cursor = null } = {}) {
   const size = Math.max(1, Math.min(50, Math.floor(asNumber(pageSize, 10))));
   const decodedCursor = decodeCursor(cursor);
@@ -525,8 +639,10 @@ async function getLeaderboardPage({ pageSize = 10, cursor = null } = {}) {
 
 module.exports = {
   upsertUserFromDecoded,
+  setUserDisplayName,
   recordMatch,
   getMe,
+  getMatchHistory,
   getLeaderboardPage,
   decodeCursor,
 };

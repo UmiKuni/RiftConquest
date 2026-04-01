@@ -5,7 +5,10 @@ const REGIONS = ["Noxus", "Demacia", "Ionia"];
 // Safe: if Firebase isn't available, gameplay continues as before.
 if (window.firebaseAuth) {
   window.firebaseAuth.onAuthStateChanged(async (user) => {
-    if (!user) return;
+    if (!user) {
+      socket.emit("clearAuth");
+      return;
+    }
     try {
       const token = await user.getIdToken();
       socket.emit("authToken", { token });

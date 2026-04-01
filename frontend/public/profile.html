@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RiftConquest — Profile</title>
+    <link rel="stylesheet" href="/vendor/mdi/css/materialdesignicons.min.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="lobby-bg">
+      <video
+        class="lobby-bg-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto"
+        aria-hidden="true"
+        tabindex="-1"
+      >
+        <source src="/image/Background_Lobby.webm" type="video/webm" />
+      </video>
+
+      <div class="lobby-card profile-card" aria-label="Profile">
+        <div class="profile-topbar">
+          <button
+            class="btn btn-secondary btn-sm"
+            id="btnBackLobby"
+            type="button"
+          >
+            <span class="mdi mdi-arrow-left ui-icon" aria-hidden="true"></span>
+            <span>Back to Lobby</span>
+          </button>
+        </div>
+
+        <div class="lobby-logo">
+          <h1 class="cinzel">Profile</h1>
+          <p class="subtitle">Account status</p>
+        </div>
+
+        <div class="profile-body">
+          <div class="profile-left">
+            <div class="profile-field">
+              <div class="profile-field-label">Display Name</div>
+              <div class="profile-field-row">
+                <input
+                  id="profileNameInput"
+                  class="input-field"
+                  type="text"
+                  maxlength="16"
+                  placeholder="Your name"
+                  autocomplete="nickname"
+                  spellcheck="false"
+                />
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="btnSaveName"
+                  type="button"
+                >
+                  <span
+                    class="mdi mdi-content-save-outline ui-icon"
+                    aria-hidden="true"
+                  ></span>
+                  <span>Save</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="profile-field">
+              <div class="profile-field-label">Stats</div>
+              <div class="profile-stats" aria-label="Stats">
+                <div class="profile-stat">
+                  <div class="profile-stat-label">Matches</div>
+                  <div class="profile-stat-value" id="profileMatches">—</div>
+                </div>
+                <div class="profile-stat">
+                  <div class="profile-stat-label">Wins</div>
+                  <div class="profile-stat-value" id="profileWins">—</div>
+                </div>
+                <div class="profile-stat">
+                  <div class="profile-stat-label">ELO</div>
+                  <div class="profile-stat-value" id="profileElo">—</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="profile-field">
+              <div class="profile-field-label">Analytics</div>
+              <div
+                class="profile-stats profile-analytics"
+                aria-label="Analytics"
+              >
+                <div class="profile-stat">
+                  <div class="profile-stat-label">Win Rate</div>
+                  <div class="profile-stat-value" id="profileWinRate">—</div>
+                </div>
+                <div class="profile-stat">
+                  <div class="profile-stat-label">Recent (10)</div>
+                  <div class="profile-stat-value" id="profileRecent">—</div>
+                </div>
+                <div class="profile-stat">
+                  <div class="profile-stat-label">ELO Δ (10)</div>
+                  <div class="profile-stat-value" id="profileEloDelta">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-right">
+            <div class="profile-field">
+              <div class="profile-field-label">Match History</div>
+              <div class="match-history" id="matchHistoryList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="auth-msg hidden" id="profileMsg"></div>
+      </div>
+    </div>
+
+    <script src="/vendor/firebase/firebase-app-compat.js"></script>
+    <script src="/vendor/firebase/firebase-auth-compat.js"></script>
+    <script src="/vendor/firebase/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="firebase-client.js"></script>
+
+    <script src="profile.js"></script>
+  </body>
+</html>

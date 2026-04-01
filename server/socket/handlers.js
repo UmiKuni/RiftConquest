@@ -10,6 +10,7 @@ const { advanceTurn, endRound } = require("../game/round");
 const { verifyIdToken } = require("../firebaseAdmin");
 const {
   upsertUserFromDecoded,
+  getMe,
   recordMatch,
 } = require("../persistence/firestore");
 
@@ -103,33 +104,75 @@ function registerSocketHandlers(io, roomManager) {
       try {
         const decoded = await verifyIdToken(token);
         const provider = decoded.firebase && decoded.firebase.sign_in_provider;
+        const isAnonymous = provider === "anonymous";
         socket.data.firebaseUser = {
           uid: decoded.uid,
           email: decoded.email || null,
           name: decoded.name || null,
           provider: provider || null,
-          isAnonymous: provider === "anonymous",
+          isAnonymous,
         };
 
+        // Cached server-authoritative profile display name for authenticated accounts.
+        socket.data.profileDisplayName = null;
+
         // Best-effort: create/update the server-backed player profile.
-        void upsertUserFromDecoded(decoded).catch(() => {});
+        // Guests (anonymous) must not trigger server persistence.
+        if (!isAnonymous) {
+          try {
+            await upsertUserFromDecoded(decoded);
+            const me = await getMe(decoded.uid);
+            if (
+              me &&
+              typeof me.displayName === "string" &&
+              me.displayName.trim()
+            ) {
+              socket.data.profileDisplayName = me.displayName.trim();
+            }
+          } catch {
+            // ignore
+          }
+        }
 
         // If the socket is already associated with a room, attach the UID.
         const found = roomManager.getRoomOfSocket(socket.id);
         if (found) {
           const { room } = found;
           const pIdx = roomManager.playerIndexOf(room, socket.id);
-          setRoomPlayerUid(room, pIdx, decoded.uid);
+          if (!isAnonymous) setRoomPlayerUid(room, pIdx, decoded.uid);
+          else setRoomPlayerUid(room, pIdx, null);
+          if (!isAnonymous && socket.data.profileDisplayName) {
+            setRoomPlayerDisplayName(
+              room,
+              pIdx,
+              socket.data.profileDisplayName,
+            );
+          }
         }
 
         socket.emit("authOk", {
           uid: decoded.uid,
           provider: provider || null,
-          isAnonymous: provider === "anonymous",
+          isAnonymous,
         });
       } catch (err) {
         delete socket.data.firebaseUser;
+        delete socket.data.profileDisplayName;
         socket.emit("authError", "Auth failed.");
+      }
+    });
+
+    // Client-side sign-out can leave the socket connected; ensure the server
+    // doesn't keep stale authenticated identity attached to this socket.
+    socket.on("clearAuth", () => {
+      delete socket.data.firebaseUser;
+      delete socket.data.profileDisplayName;
+
+      const found = roomManager.getRoomOfSocket(socket.id);
+      if (found) {
+        const { room } = found;
+        const pIdx = roomManager.playerIndexOf(room, socket.id);
+        setRoomPlayerUid(room, pIdx, null);
       }
     });
 
@@ -138,14 +181,20 @@ function registerSocketHandlers(io, roomManager) {
       const code = roomManager.createRoom(socket.id);
       const room = rooms[code];
       if (room) {
+        const isAccount =
+          socket.data.firebaseUser &&
+          socket.data.firebaseUser.isAnonymous === false;
         const displayName =
-          payload && typeof payload.displayName === "string"
-            ? payload.displayName
-            : "";
+          isAccount && socket.data.profileDisplayName
+            ? socket.data.profileDisplayName
+            : payload && typeof payload.displayName === "string"
+              ? payload.displayName
+              : "";
         setRoomPlayerDisplayName(room, 0, displayName);
       }
       if (room && socket.data.firebaseUser && socket.data.firebaseUser.uid) {
-        setRoomPlayerUid(room, 0, socket.data.firebaseUser.uid);
+        if (socket.data.firebaseUser.isAnonymous === false)
+          setRoomPlayerUid(room, 0, socket.data.firebaseUser.uid);
       }
       socket.join(code);
       socket.emit("roomCreated", { code });
@@ -162,15 +211,22 @@ function registerSocketHandlers(io, roomManager) {
       if (!room) return socket.emit("joinError", "Room not found.");
       if (room.players[1]) return socket.emit("joinError", "Room is full.");
 
+      const isAccount =
+        socket.data.firebaseUser &&
+        socket.data.firebaseUser.isAnonymous === false;
+
       const displayName =
-        payload && typeof payload.displayName === "string"
-          ? payload.displayName
-          : "";
+        isAccount && socket.data.profileDisplayName
+          ? socket.data.profileDisplayName
+          : payload && typeof payload.displayName === "string"
+            ? payload.displayName
+            : "";
       setRoomPlayerDisplayName(room, 1, displayName);
 
       room.players[1] = socket.id;
       if (socket.data.firebaseUser && socket.data.firebaseUser.uid) {
-        setRoomPlayerUid(room, 1, socket.data.firebaseUser.uid);
+        if (socket.data.firebaseUser.isAnonymous === false)
+          setRoomPlayerUid(room, 1, socket.data.firebaseUser.uid);
       }
 
       room.matchStartedAtMs = Date.now();
@@ -534,10 +590,16 @@ function registerSocketHandlers(io, roomManager) {
       if (!room)
         return socket.emit("joinError", "Room not found (may have expired).");
 
+      const isAccount =
+        socket.data.firebaseUser &&
+        socket.data.firebaseUser.isAnonymous === false;
+
       const displayName =
-        payload && typeof payload.displayName === "string"
-          ? payload.displayName
-          : "";
+        isAccount && socket.data.profileDisplayName
+          ? socket.data.profileDisplayName
+          : payload && typeof payload.displayName === "string"
+            ? payload.displayName
+            : "";
       setRoomPlayerDisplayName(room, playerIndex, displayName);
       // Cancel any pending disconnect timer for this player
       if (room.disconnectTimers?.[playerIndex]) {
@@ -553,7 +615,8 @@ function registerSocketHandlers(io, roomManager) {
       if (room.state) {
         // Re-attach UID mapping on rejoin (helps if auth arrived late).
         if (socket.data.firebaseUser && socket.data.firebaseUser.uid) {
-          setRoomPlayerUid(room, playerIndex, socket.data.firebaseUser.uid);
+          if (socket.data.firebaseUser.isAnonymous === false)
+            setRoomPlayerUid(room, playerIndex, socket.data.firebaseUser.uid);
         }
         roomManager.broadcastState(code);
       }

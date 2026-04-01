@@ -7,7 +7,9 @@ const { Server } = require("socket.io");
 const { verifyIdToken } = require("./firebaseAdmin");
 const {
   upsertUserFromDecoded,
+  setUserDisplayName,
   getMe,
+  getMatchHistory,
   getLeaderboardPage,
 } = require("./persistence/firestore");
 
@@ -51,6 +53,12 @@ app.get("/api/me", async (req, res) => {
     return res.status(401).json({ error: "Invalid auth token." });
   }
 
+  const provider =
+    (decoded.firebase && decoded.firebase.sign_in_provider) || null;
+  if (provider === "anonymous") {
+    return res.status(403).json({ error: "Guest accounts have no profile." });
+  }
+
   try {
     await upsertUserFromDecoded(decoded);
     const me = await getMe(decoded.uid);
@@ -58,6 +66,74 @@ app.get("/api/me", async (req, res) => {
   } catch (err) {
     console.warn("[api] /api/me failed:", err && err.message);
     res.status(500).json({ error: "Failed to load profile." });
+  }
+});
+
+app.post("/api/me/displayName", async (req, res) => {
+  const token = getBearerToken(req);
+  if (!token) return res.status(401).json({ error: "Missing auth token." });
+
+  let decoded;
+  try {
+    decoded = await verifyIdToken(token);
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid auth token." });
+  }
+
+  const provider =
+    (decoded.firebase && decoded.firebase.sign_in_provider) || null;
+  if (provider === "anonymous") {
+    return res
+      .status(403)
+      .json({ error: "Guest accounts cannot set a profile." });
+  }
+
+  const displayName =
+    req.body && typeof req.body.displayName === "string"
+      ? req.body.displayName
+      : "";
+
+  try {
+    await upsertUserFromDecoded(decoded);
+    const saved = await setUserDisplayName(decoded.uid, displayName);
+    res.json({ displayName: saved });
+  } catch (err) {
+    const msg =
+      err && err.message
+        ? String(err.message)
+        : "Failed to update display name.";
+    const isValidation = msg.toLowerCase().includes("invalid");
+    res.status(isValidation ? 400 : 500).json({ error: msg });
+  }
+});
+
+app.get("/api/me/matchHistory", async (req, res) => {
+  const token = getBearerToken(req);
+  if (!token) return res.status(401).json({ error: "Missing auth token." });
+
+  let decoded;
+  try {
+    decoded = await verifyIdToken(token);
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid auth token." });
+  }
+
+  const provider =
+    (decoded.firebase && decoded.firebase.sign_in_provider) || null;
+  if (provider === "anonymous") {
+    return res.status(403).json({ error: "Guest accounts have no profile." });
+  }
+
+  const limitRaw = req.query.limit;
+  const limit = typeof limitRaw === "string" ? Number(limitRaw) : undefined;
+
+  try {
+    await upsertUserFromDecoded(decoded);
+    const items = await getMatchHistory(decoded.uid, { limit });
+    res.json({ items });
+  } catch (err) {
+    console.warn("[api] /api/me/matchHistory failed:", err && err.message);
+    res.status(500).json({ error: "Failed to load match history." });
   }
 });
 

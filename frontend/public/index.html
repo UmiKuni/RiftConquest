@@ -25,26 +25,134 @@
       >
         <source src="/image/Background_Lobby.webm" type="video/webm" />
       </video>
+
+      <!-- Player identity + Account: fixed top-left -->
+      <div class="lobby-corner-left" aria-label="Player identity and account">
+        <div class="corner-panel lobby-userpanel" aria-label="Player">
+          <!-- Guest: editable display name + Login button -->
+          <div id="guestPanel">
+            <div class="userpanel-toprow">
+              <label class="profile-label" for="displayNameInput"
+                >Display Name</label
+              >
+              <button
+                class="btn btn-secondary btn-sm"
+                id="btnLogin"
+                type="button"
+                aria-expanded="false"
+                aria-controls="loginFlyout"
+              >
+                <span class="mdi mdi-login ui-icon" aria-hidden="true"></span>
+                <span>Login</span>
+              </button>
+            </div>
+
+            <input
+              id="displayNameInput"
+              class="input-field display-name-input"
+              type="text"
+              maxlength="16"
+              placeholder="Enter a name"
+              autocomplete="nickname"
+              spellcheck="false"
+            />
+          </div>
+
+          <!-- Guest: hidden flyout with auth options -->
+          <div class="login-flyout hidden" id="loginFlyout" aria-label="Login">
+            <button
+              class="btn btn-secondary btn-sm"
+              id="btnGoogleSignIn"
+              type="button"
+            >
+              <span class="mdi mdi-google ui-icon" aria-hidden="true"></span>
+              <span>Sign in with Google</span>
+            </button>
+
+            <div class="auth-divider"><span>OR</span></div>
+
+            <div class="auth-email">
+              <input
+                id="emailInput"
+                class="input-field auth-input"
+                type="email"
+                placeholder="Email"
+                autocomplete="email"
+                spellcheck="false"
+              />
+              <input
+                id="passwordInput"
+                class="input-field auth-input"
+                type="password"
+                placeholder="Password"
+                autocomplete="current-password"
+              />
+              <div class="auth-buttons">
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="btnEmailSignIn"
+                  type="button"
+                >
+                  Sign In
+                </button>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="btnEmailSignUp"
+                  type="button"
+                >
+                  Create Account
+                </button>
+              </div>
+            </div>
+
+            <div class="auth-msg hidden" id="authMsg"></div>
+          </div>
+
+          <!-- Account: icon + fixed name + ELO (clickable) -->
+          <button
+            class="account-chip hidden"
+            id="btnAccount"
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-controls="accountMenu"
+          >
+            <span
+              class="mdi mdi-account-circle ui-icon"
+              aria-hidden="true"
+            ></span>
+            <span class="account-name" id="accountName">Player</span>
+            <span class="account-elo"
+              >ELO <span id="accountElo">----</span></span
+            >
+            <span class="mdi mdi-menu-down ui-icon" aria-hidden="true"></span>
+          </button>
+
+          <div
+            class="account-menu hidden"
+            id="accountMenu"
+            role="menu"
+            aria-label="Account menu"
+          >
+            <button class="menu-item" id="btnViewProfile" type="button">
+              <span
+                class="mdi mdi-account-box-outline ui-icon"
+                aria-hidden="true"
+              ></span>
+              <span>View profile</span>
+            </button>
+            <button class="menu-item" id="btnLogout" type="button">
+              <span class="mdi mdi-logout ui-icon" aria-hidden="true"></span>
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="lobby-card">
         <div class="lobby-logo">
           <h1 class="cinzel">RiftConquest</h1>
           <p class="subtitle">Battle for the Rift · 2 Players</p>
-        </div>
-
-        <div class="lobby-profile" aria-label="Player identity">
-          <label class="profile-label" for="displayNameInput"
-            >Display Name</label
-          >
-          <input
-            id="displayNameInput"
-            class="input-field display-name-input"
-            type="text"
-            maxlength="16"
-            placeholder="Enter a name"
-            autocomplete="nickname"
-            spellcheck="false"
-          />
-          <div class="profile-hint">Visible to your opponent in-match.</div>
         </div>
 
         <div class="lobby-tabs" role="tablist" aria-label="Lobby tabs">
