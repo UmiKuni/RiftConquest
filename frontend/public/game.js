@@ -234,6 +234,11 @@ socket.on("gameState", (state) => {
   render();
 });
 
+socket.on("joinError", (msg) => {
+  showToast(msg || "Room error.", true);
+  setTimeout(() => (location.href = "/"), 2500);
+});
+
 socket.on("actionError", (msg) => showToast(msg, true));
 
 socket.on("emojiReaction", (payload) => {

@@ -40,6 +40,184 @@ function setRoomPlayerDisplayName(room, playerIdx, rawName) {
 function registerSocketHandlers(io, roomManager) {
   const { rooms } = roomManager;
 
+  function readDurationMs(envValue, fallbackMs, minMs, maxMs) {
+    const n =
+      typeof envValue === "string" && envValue.trim()
+        ? parseInt(envValue, 10)
+        : NaN;
+    if (!Number.isFinite(n) || n <= 0) return fallbackMs;
+    return Math.max(minMs, Math.min(maxMs, n));
+  }
+
+  // Phase 5 governance defaults (can be overridden via env vars)
+  const LOBBY_DISCONNECT_GRACE_MS = 10000;
+  const TURN_TIMEOUT_MS = readDurationMs(
+    process.env.TURN_TIMEOUT_MS,
+    40000,
+    5000,
+    5 * 60 * 1000,
+  );
+  const DISCONNECT_FORFEIT_MS = readDurationMs(
+    process.env.DISCONNECT_FORFEIT_MS,
+    60000,
+    10000,
+    30 * 60 * 1000,
+  );
+
+  function actingPlayerIndexForState(state) {
+    if (!state) return null;
+    if (state.pendingAbility) {
+      if (state.pendingAbility.type === "N5_opp_flip") {
+        return 1 - state.pendingAbility.playerIdx;
+      }
+      return state.pendingAbility.playerIdx;
+    }
+    return state.currentTurn;
+  }
+
+  function turnTimerKeyForState(state) {
+    if (!state) return "";
+    const actor = actingPlayerIndexForState(state);
+    const pendingType = state.pendingAbility ? state.pendingAbility.type : "";
+    const pendingPlayerIdx = state.pendingAbility
+      ? state.pendingAbility.playerIdx
+      : "";
+    return `${state.phase}|r${state.round}|t${state.currentTurn}|a${actor}|p${pendingType}|pp${pendingPlayerIdx}`;
+  }
+
+  function clearTurnTimer(room) {
+    if (!room) return;
+    if (room.turnTimer) {
+      clearTimeout(room.turnTimer);
+      room.turnTimer = null;
+    }
+    room.turnTimerKey = null;
+  }
+
+  function clearDisconnectTimer(room, playerIdx) {
+    if (!room || !room.disconnectTimers) return;
+    const t = room.disconnectTimers[playerIdx];
+    if (t) clearTimeout(t);
+    delete room.disconnectTimers[playerIdx];
+  }
+
+  function clearAllDisconnectTimers(room) {
+    if (!room || !room.disconnectTimers) return;
+    clearDisconnectTimer(room, 0);
+    clearDisconnectTimer(room, 1);
+    room.disconnectTimers = {};
+  }
+
+  function scheduleDisconnectForfeit(
+    code,
+    room,
+    playerIdx,
+    socketIdSnapshot,
+    delayMs = DISCONNECT_FORFEIT_MS,
+  ) {
+    if (!room) return;
+    const ms = Math.max(0, Math.floor(delayMs));
+
+    room.disconnectTimers = room.disconnectTimers || {};
+    clearDisconnectTimer(room, playerIdx);
+
+    room.disconnectTimers[playerIdx] = setTimeout(() => {
+      const live = rooms[code];
+      if (!live || !live.state) return;
+      if (live.players[playerIdx] !== socketIdSnapshot) return; // rejoined
+
+      const otherIdx = 1 - playerIdx;
+      const bothDisconnected = !!(
+        live.disconnectTimers && live.disconnectTimers[otherIdx]
+      );
+
+      // This timer has fired; remove it from the map.
+      delete live.disconnectTimers[playerIdx];
+
+      if (bothDisconnected) {
+        clearAllDisconnectTimers(live);
+        clearTurnTimer(live);
+        delete rooms[code];
+        console.log(`Room ${code} ended as No Contest (both disconnected).`);
+        return;
+      }
+
+      if (live.state.phase !== "gameOver") {
+        live.state.phase = "gameOver";
+        live.state.surrender = true;
+        live.state.disconnectForfeit = true;
+        live.state.winner = otherIdx;
+        live.state.pendingAbility = null;
+        live.state.abilityQueue = [];
+        live.state.log.push(
+          `Player ${playerIdx + 1} forfeits due to disconnect.`,
+        );
+      }
+
+      maybePersistMatch(code, live);
+      roomManager.broadcastState(code);
+      refreshTurnTimer(code, live);
+    }, ms);
+  }
+
+  function refreshTurnTimer(code, room) {
+    if (!room || !room.state) return;
+    const state = room.state;
+
+    // Only enforce during active play.
+    if (state.phase !== "playing") {
+      clearTurnTimer(room);
+      return;
+    }
+
+    const actor = actingPlayerIndexForState(state);
+    if (actor !== 0 && actor !== 1) {
+      clearTurnTimer(room);
+      return;
+    }
+
+    // If the acting player is disconnected, suspend the turn timer and rely on
+    // the disconnect-forfeit timer instead.
+    if (room.disconnectTimers && room.disconnectTimers[actor]) {
+      clearTurnTimer(room);
+      return;
+    }
+
+    const key = turnTimerKeyForState(state);
+    if (room.turnTimer && room.turnTimerKey === key) return;
+
+    clearTurnTimer(room);
+    room.turnTimerKey = key;
+
+    room.turnTimer = setTimeout(() => {
+      const live = rooms[code];
+      if (!live || !live.state) return;
+
+      // Ensure we are still timing the same turn / pending ability.
+      if (turnTimerKeyForState(live.state) !== key) return;
+      if (live.state.phase !== "playing") return;
+
+      const timedOutIdx = actingPlayerIndexForState(live.state);
+      if (timedOutIdx !== 0 && timedOutIdx !== 1) return;
+
+      // If the player disconnected mid-timer, disconnect-forfeit handles it.
+      if (live.disconnectTimers && live.disconnectTimers[timedOutIdx]) return;
+
+      // Server-authoritative timeout handling: force retreat for this round.
+      live.state.log.push(
+        `Turn timer expired. Player ${timedOutIdx + 1} retreated.`,
+      );
+      live.state.withdrawn[timedOutIdx] = true;
+      live.state.pendingAbility = null;
+      live.state.abilityQueue = [];
+      endRound(live.state, code, live);
+
+      maybePersistMatch(code, live);
+      roomManager.broadcastState(code);
+      refreshTurnTimer(code, live);
+    }, TURN_TIMEOUT_MS);
+  }
+
   function setRoomPlayerUid(room, playerIdx, uid) {
     if (!room || playerIdx < 0 || playerIdx > 1) return;
     room.playerUids = room.playerUids || [null, null];
@@ -242,6 +420,7 @@ function registerSocketHandlers(io, roomManager) {
 
       io.to(code).emit("gameStarted", { code });
       roomManager.broadcastState(code);
+      refreshTurnTimer(code, room);
       console.log(`Room ${code} — game started`);
     });
 
@@ -325,6 +504,7 @@ function registerSocketHandlers(io, roomManager) {
         advanceTurn(state, code, room);
         maybePersistMatch(code, room);
         roomManager.broadcastState(code);
+        refreshTurnTimer(code, room);
         return;
       }
 
@@ -362,6 +542,7 @@ function registerSocketHandlers(io, roomManager) {
                 advanceTurn(state, code, room);
                 maybePersistMatch(code, room);
                 roomManager.broadcastState(code);
+                refreshTurnTimer(code, room);
                 return;
               }
             }
@@ -390,6 +571,7 @@ function registerSocketHandlers(io, roomManager) {
         if (result.pendingAbility) {
           room.state.pendingAbility = result.pendingAbility;
           roomManager.broadcastState(code);
+          refreshTurnTimer(code, room);
           return; // Wait for ability response
         }
       }
@@ -397,6 +579,7 @@ function registerSocketHandlers(io, roomManager) {
       advanceTurn(state, code, room);
       maybePersistMatch(code, room);
       roomManager.broadcastState(code);
+      refreshTurnTimer(code, room);
     });
 
     // ABILITY RESPONSE
@@ -493,6 +676,7 @@ function registerSocketHandlers(io, roomManager) {
               label: "LeBlanc: Now flip one of your own cards.",
             };
             roomManager.broadcastState(code);
+            refreshTurnTimer(code, room);
             return;
           } else {
             state.log.push(`LeBlanc: You have no cards to flip.`);
@@ -559,6 +743,7 @@ function registerSocketHandlers(io, roomManager) {
       if (!state.pendingAbility && state.abilityQueue.length > 0) {
         state.pendingAbility = state.abilityQueue.shift();
         roomManager.broadcastState(code);
+        refreshTurnTimer(code, room);
         return;
       }
 
@@ -568,6 +753,7 @@ function registerSocketHandlers(io, roomManager) {
       }
       maybePersistMatch(code, room);
       roomManager.broadcastState(code);
+      refreshTurnTimer(code, room);
     });
 
     // REJOIN (game.html reconnects after redirect)
@@ -619,6 +805,7 @@ function registerSocketHandlers(io, roomManager) {
             setRoomPlayerUid(room, playerIndex, socket.data.firebaseUser.uid);
         }
         roomManager.broadcastState(code);
+        refreshTurnTimer(code, room);
       }
     });
 
@@ -644,6 +831,7 @@ function registerSocketHandlers(io, roomManager) {
       endRound(state, code, room);
       maybePersistMatch(code, room);
       roomManager.broadcastState(code);
+      refreshTurnTimer(code, room);
     });
 
     // READY FOR NEXT ROUND
@@ -663,6 +851,7 @@ function registerSocketHandlers(io, roomManager) {
           startNewRound(room.state);
         }
         roomManager.broadcastState(code);
+        refreshTurnTimer(code, room);
       }
     });
 
@@ -679,6 +868,7 @@ function registerSocketHandlers(io, roomManager) {
         room.state.winner = 1 - pIdx;
         maybePersistMatch(code, room);
         roomManager.broadcastState(code);
+        refreshTurnTimer(code, room);
       }
     });
 
@@ -690,18 +880,66 @@ function registerSocketHandlers(io, roomManager) {
       const { code, room } = found;
       const playerIdx = roomManager.playerIndexOf(room, socket.id);
 
-      // Grace period: page redirects (lobby → game.html) disconnect the lobby socket.
-      // Wait 10 s before closing; rejoinRoom will cancel this timer if player reconnects.
+      if (playerIdx !== 0 && playerIdx !== 1) return;
+
       room.disconnectTimers = room.disconnectTimers || {};
-      room.disconnectTimers[playerIdx] = setTimeout(() => {
-        if (rooms[code] && rooms[code].players[playerIdx] === socket.id) {
-          io.to(code).emit("opponentLeft");
+      clearDisconnectTimer(room, playerIdx);
+
+      const socketIdSnapshot = socket.id;
+
+      // Lobby room (no game state yet): preserve the 10s redirect/reconnect grace.
+      if (!room.state) {
+        room.disconnectTimers[playerIdx] = setTimeout(() => {
+          const live = rooms[code];
+          if (!live) return;
+          if (live.players[playerIdx] !== socketIdSnapshot) return;
+
+          // If a match started during this grace window, switch to normal
+          // disconnect-forfeit instead of deleting an active game.
+          if (live.state && live.state.phase !== "gameOver") {
+            scheduleDisconnectForfeit(
+              code,
+              live,
+              playerIdx,
+              socketIdSnapshot,
+              Math.max(0, DISCONNECT_FORFEIT_MS - LOBBY_DISCONNECT_GRACE_MS),
+            );
+            refreshTurnTimer(code, live);
+            return;
+          }
+
+          clearAllDisconnectTimers(live);
+          clearTurnTimer(live);
           delete rooms[code];
           console.log(
             `Room ${code} removed after grace period (player ${playerIdx + 1} gone).`,
           );
-        }
-      }, 10000);
+        }, LOBBY_DISCONNECT_GRACE_MS);
+        return;
+      }
+
+      // If the match is already over, just clean up later.
+      if (room.state.phase === "gameOver") {
+        room.disconnectTimers[playerIdx] = setTimeout(() => {
+          const live = rooms[code];
+          if (!live) return;
+          if (live.players[playerIdx] !== socketIdSnapshot) return;
+
+          clearAllDisconnectTimers(live);
+          clearTurnTimer(live);
+          delete rooms[code];
+          console.log(`Room ${code} cleaned up after game over.`);
+        }, LOBBY_DISCONNECT_GRACE_MS);
+        return;
+      }
+
+      // Active match: after a longer grace period, disconnected player forfeits.
+      // If BOTH players are disconnected when a forfeit would occur, the match
+      // becomes "No Contest" (no persistence).
+      scheduleDisconnectForfeit(code, room, playerIdx, socketIdSnapshot);
+
+      // If the disconnect affects the currently acting player, pause the turn timer.
+      refreshTurnTimer(code, room);
     });
   });
 }
