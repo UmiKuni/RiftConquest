@@ -184,14 +184,32 @@ function render() {
     typeof names[1 - myIndex] === "string" && names[1 - myIndex].trim()
       ? names[1 - myIndex]
       : "Opponent";
-  const myLabel =
-    isRanked && myElo !== null ? `${myName} · ELO ${myElo}` : myName;
-  const oppLabel =
-    isRanked && oppElo !== null ? `${oppName} · ELO ${oppElo}` : oppName;
   const myLabelEl = document.querySelector("#myScoreBlock .player-label");
   const oppLabelEl = document.querySelector("#oppScoreBlock .player-label");
-  if (myLabelEl) myLabelEl.textContent = myLabel;
-  if (oppLabelEl) oppLabelEl.textContent = oppLabel;
+
+  function renderPlayerLabel(labelEl, name, elo) {
+    if (!labelEl) return;
+
+    if (!isRanked || elo === null) {
+      labelEl.textContent = name;
+      return;
+    }
+
+    labelEl.textContent = "";
+    labelEl.appendChild(document.createTextNode(name));
+    labelEl.appendChild(document.createTextNode(" · "));
+
+    const trophyEl = document.createElement("span");
+    trophyEl.className = "mdi mdi-trophy ui-icon";
+    trophyEl.setAttribute("aria-hidden", "true");
+    trophyEl.setAttribute("title", "Rift Points (RP)");
+
+    labelEl.appendChild(trophyEl);
+    labelEl.appendChild(document.createTextNode(` ${elo}`));
+  }
+
+  renderPlayerLabel(myLabelEl, myName, myElo);
+  renderPlayerLabel(oppLabelEl, oppName, oppElo);
 
   // Scores & Round
   document.getElementById("myVP").textContent = s.scores[myIndex];
@@ -966,7 +984,7 @@ document.getElementById("btnRsSurrender").addEventListener("click", () => {
   if (
     confirm(
       isRanked
-        ? "Are you sure you want to surrender the entire game? You will lose ELO!"
+        ? "Are you sure you want to surrender the entire game? You will lose RP!"
         : "Are you sure you want to surrender the entire game?",
     )
   ) {

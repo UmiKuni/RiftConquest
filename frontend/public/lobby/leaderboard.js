@@ -88,7 +88,17 @@
 
       const eloEl = document.createElement("div");
       eloEl.className = "leaderboard-elo cinzel";
-      eloEl.textContent = `ELO ${elo}`;
+      eloEl.title = "Rift Points (RP)";
+
+      const trophyEl = document.createElement("span");
+      trophyEl.className = "mdi mdi-trophy ui-icon";
+      trophyEl.setAttribute("aria-hidden", "true");
+
+      const valueEl = document.createElement("span");
+      valueEl.textContent = String(elo);
+
+      eloEl.appendChild(trophyEl);
+      eloEl.appendChild(valueEl);
 
       const matchesEl = document.createElement("div");
       matchesEl.className = "leaderboard-matches";

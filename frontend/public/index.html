@@ -8,6 +8,7 @@
       name="description"
       content="RiftConquest: A 2-player online card game. Deploy champions, conquer regions, and be first to 12 Victory Points."
     />
+    <link rel="icon" type="image/png" href="/image/RiftConquest_Logo.png" />
     <link rel="stylesheet" href="/vendor/mdi/css/materialdesignicons.min.css" />
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -108,7 +109,7 @@
             <div class="auth-msg hidden" id="authMsg"></div>
           </div>
 
-          <!-- Account: icon + fixed name + ELO (clickable) -->
+          <!-- Account: icon + fixed name + Rift Points (clickable) -->
           <button
             class="account-chip hidden"
             id="btnAccount"
@@ -122,9 +123,14 @@
               aria-hidden="true"
             ></span>
             <span class="account-name" id="accountName">Player</span>
-            <span class="account-elo"
-              >ELO <span id="accountElo">----</span></span
+            <span
+              class="account-elo"
+              title="Rift Points (RP)"
+              aria-label="Rift Points"
             >
+              <span class="mdi mdi-trophy ui-icon" aria-hidden="true"></span>
+              <span id="accountElo">----</span>
+            </span>
             <span class="mdi mdi-menu-down ui-icon" aria-hidden="true"></span>
           </button>
 
