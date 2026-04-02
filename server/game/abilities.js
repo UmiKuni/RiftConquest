@@ -24,6 +24,7 @@ function applyInstantAbility(state, cardId, playerIdx, playedRegion) {
             type: "N1_peek",
             playerIdx,
             topCard: state.deck[0],
+            playedRegion,
           },
         };
       }

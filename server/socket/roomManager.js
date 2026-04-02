@@ -1,6 +1,17 @@
 function createRoomManager(io) {
   const rooms = {};
 
+  function logEntryForPlayer(entry, playerIdx) {
+    if (typeof entry === "string") return entry;
+    if (!entry || typeof entry !== "object") return null;
+
+    if (typeof entry.m0 === "string" && typeof entry.m1 === "string") {
+      return playerIdx === 0 ? entry.m0 : entry.m1;
+    }
+    if (typeof entry.text === "string") return entry.text;
+    return null;
+  }
+
   function generateCode() {
     return Math.random().toString(36).substring(2, 6).toUpperCase();
   }
@@ -83,6 +94,12 @@ function createRoomManager(io) {
           delete view.pendingAbility.topCard;
         }
       }
+
+      // Per-player log view (avoid leaking facedown card identities)
+      const rawLog = Array.isArray(room.state.log) ? room.state.log : [];
+      view.log = rawLog
+        .map((e) => logEntryForPlayer(e, i))
+        .filter((e) => typeof e === "string" && e.length > 0);
 
       io.to(socketId).emit("gameState", view);
     }

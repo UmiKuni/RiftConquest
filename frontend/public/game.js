@@ -703,10 +703,22 @@ function calcStrengthClient(s, region, playerIdx) {
   );
   const luxRegion = findCardRegion(s, "D1", playerIdx);
 
-  for (const c of cards) {
+  // N4 Swain (Ongoing): cards covered by a face-up Swain in this pile become STR 4.
+  let swainIdx = -1;
+  for (let i = cards.length - 1; i >= 0; i--) {
+    const c = cards[i];
+    if (c && c.faceUp && c.id === "N4") {
+      swainIdx = i;
+      break;
+    }
+  }
+
+  for (let idx = 0; idx < cards.length; idx++) {
+    const c = cards[idx];
     const def = getCardDef(c.id);
     let str = c.faceUp ? def.strength : 2;
     if (!c.faceUp && zedActive) str = 4;
+    if (swainIdx !== -1 && idx < swainIdx) str = 4;
     total += str;
   }
   if (luxRegion && adjacentTo(luxRegion, region)) total += 3;
@@ -937,8 +949,19 @@ function openAbilityModal(ability, customLabel) {
   switch (ability.type) {
     case "N1_peek": {
       const top = ability.topCard;
+      if (!top) {
+        desc.textContent = "Katarina: No card to display.";
+        footer.appendChild(
+          mkBtn("Skip", "btn btn-secondary btn-sm", () => {
+            socket.emit("abilityResponse", { deploy: false });
+            closeModal();
+          }),
+        );
+        break;
+      }
       desc.textContent = `Top card: ${top.champion} (${top.region}, STR ${top.strength}). Deploy facedown to an adjacent region?`;
-      for (const r of adjacentRegions("Noxus")) {
+      const base = ability.playedRegion || "Noxus";
+      for (const r of adjacentRegions(base)) {
         const btn = mkModalOption(
           r,
           `<span class="mdi mdi-map-marker ui-icon" aria-hidden="true"></span>&nbsp;${r}`,

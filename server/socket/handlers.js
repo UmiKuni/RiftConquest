@@ -698,7 +698,16 @@ function registerSocketHandlers(io, roomManager) {
       );
       if (faceDown && fioraActive) {
         state.hands[pIdx].splice(handIdx, 1);
-        state.log.push(`Fiora discards ${cardDef.champion} (facedown)!`);
+        state.log.push({
+          m0:
+            pIdx === 0
+              ? `Fiora discards ${cardDef.champion} (facedown)!`
+              : "Fiora discards opponent's facedown card!",
+          m1:
+            pIdx === 1
+              ? `Fiora discards ${cardDef.champion} (facedown)!`
+              : "Fiora discards opponent's facedown card!",
+        });
         advanceTurn(state, code, room);
         maybePersistMatch(code, room);
         roomManager.broadcastState(code);
@@ -706,44 +715,51 @@ function registerSocketHandlers(io, roomManager) {
         return;
       }
 
-      // I5 Irelia: discard if adjacent region has 3+ cards
-      if (!faceDown) {
-        const adjR = adjacentRegions(regionName);
-        const irelia0Active = state.regions[regionName][0].some(
-          (c) => c.faceUp && c.id === "I5",
+      // I5 Irelia (Ongoing): if a card is played to a region adjacent to Irelia,
+      // and that region already has 3+ cards total, discard the played card.
+      const ireliaRegions = [];
+      for (const r of REGIONS) {
+        const hasIreliaHere =
+          state.regions[r][0].some((c) => c.faceUp && c.id === "I5") ||
+          state.regions[r][1].some((c) => c.faceUp && c.id === "I5");
+        if (hasIreliaHere) ireliaRegions.push(r);
+      }
+
+      if (ireliaRegions.length > 0) {
+        const isAdjacentToIrelia = ireliaRegions.some((r) =>
+          adjacentRegions(r).includes(regionName),
         );
-        const irelia1Active = state.regions[regionName][1].some(
-          (c) => c.faceUp && c.id === "I5",
-        );
-        const iriActive = irelia0Active || irelia1Active;
-        // Check if target region's adjacent has 3+ for the PLAYING player
-        // Rule: if a card is played to adjacent region with 3+ cards already, discard it
-        // "adjacent region" here means: the region receiving the card is adjacent to Irelia's region
-        // and has 3+ cards total
-        if (iriActive) {
-          const iriRegion = REGIONS.find(
-            (r) =>
-              state.regions[r][0].some((c) => c.faceUp && c.id === "I5") ||
-              state.regions[r][1].some((c) => c.faceUp && c.id === "I5"),
-          );
-          if (iriRegion) {
-            const adjToIri = adjacentRegions(iriRegion);
-            if (adjToIri.includes(regionName)) {
-              const totalCards =
-                state.regions[regionName][0].length +
-                state.regions[regionName][1].length;
-              if (totalCards >= 3) {
-                state.hands[pIdx].splice(handIdx, 1);
-                state.log.push(
-                  `Irelia discards ${cardDef.champion} played to ${regionName}!`,
-                );
-                advanceTurn(state, code, room);
-                maybePersistMatch(code, room);
-                roomManager.broadcastState(code);
-                refreshTurnTimer(code, room);
-                return;
-              }
+
+        if (isAdjacentToIrelia) {
+          const totalCards =
+            state.regions[regionName][0].length +
+            state.regions[regionName][1].length;
+
+          if (totalCards >= 3) {
+            state.hands[pIdx].splice(handIdx, 1);
+
+            if (faceDown) {
+              state.log.push({
+                m0:
+                  pIdx === 0
+                    ? `Irelia discards ${cardDef.champion} (facedown) played to ${regionName}!`
+                    : `Irelia discards a facedown card played to ${regionName}!`,
+                m1:
+                  pIdx === 1
+                    ? `Irelia discards ${cardDef.champion} (facedown) played to ${regionName}!`
+                    : `Irelia discards a facedown card played to ${regionName}!`,
+              });
+            } else {
+              state.log.push(
+                `Irelia discards ${cardDef.champion} played to ${regionName}!`,
+              );
             }
+
+            advanceTurn(state, code, room);
+            maybePersistMatch(code, room);
+            roomManager.broadcastState(code);
+            refreshTurnTimer(code, room);
+            return;
           }
         }
       }
@@ -799,7 +815,21 @@ function registerSocketHandlers(io, roomManager) {
       switch (ability.type) {
         case "N1_peek": {
           // data: { deploy: bool, regionName: string|null }
-          if (data.deploy && state.deck.length > 0 && data.regionName) {
+          const playedRegion =
+            ability &&
+            typeof ability.playedRegion === "string" &&
+            ability.playedRegion
+              ? ability.playedRegion
+              : "Noxus";
+          const targetRegion =
+            data && typeof data.regionName === "string" ? data.regionName : "";
+          const allowedRegions = adjacentRegions(playedRegion);
+          const isValidDeployTarget =
+            targetRegion &&
+            REGIONS.includes(targetRegion) &&
+            allowedRegions.includes(targetRegion);
+
+          if (data.deploy && state.deck.length > 0 && isValidDeployTarget) {
             const topCard = state.deck.shift();
 
             // D5 Fiora check: discard if either player has an active Fiora
@@ -810,23 +840,43 @@ function registerSocketHandlers(io, roomManager) {
             );
 
             if (fioraActive) {
-              state.log.push(
-                `Katarina: ${pIdx === 0 ? "You" : "Opponent"} tried to deploy ${topCard.champion} facedown to ${data.regionName}, but Fiora discarded it!`,
-              );
+              state.log.push({
+                m0:
+                  pIdx === 0
+                    ? `Katarina: You tried to deploy ${topCard.champion} facedown to ${targetRegion}, but Fiora discarded it!`
+                    : `Katarina: Opponent tried to deploy a card facedown to ${targetRegion}, but Fiora discarded it!`,
+                m1:
+                  pIdx === 1
+                    ? `Katarina: You tried to deploy ${topCard.champion} facedown to ${targetRegion}, but Fiora discarded it!`
+                    : `Katarina: Opponent tried to deploy a card facedown to ${targetRegion}, but Fiora discarded it!`,
+              });
             } else {
-              // Must be adjacent to Noxus (where Katarina was played)
-              state.regions[data.regionName][pIdx].push({
+              state.regions[targetRegion][pIdx].push({
                 id: topCard.id,
                 faceUp: false,
               });
-              state.log.push(
-                `Katarina: ${pIdx === 0 ? "You" : "Opponent"} deployed ${topCard.champion} facedown to ${data.regionName}.`,
-              );
+              state.log.push({
+                m0:
+                  pIdx === 0
+                    ? `Katarina: You deployed ${topCard.champion} facedown to ${targetRegion}.`
+                    : `Katarina: Opponent deployed a card facedown to ${targetRegion}.`,
+                m1:
+                  pIdx === 1
+                    ? `Katarina: You deployed ${topCard.champion} facedown to ${targetRegion}.`
+                    : `Katarina: Opponent deployed a card facedown to ${targetRegion}.`,
+              });
             }
           } else {
-            state.log.push(
-              `Katarina: ${pIdx === 0 ? "You" : "Opponent"} chose not to deploy.`,
-            );
+            state.log.push({
+              m0:
+                pIdx === 0
+                  ? "Katarina: You chose not to deploy."
+                  : "Katarina: Opponent chose not to deploy.",
+              m1:
+                pIdx === 1
+                  ? "Katarina: You chose not to deploy."
+                  : "Katarina: Opponent chose not to deploy.",
+            });
           }
           state.pendingAbility = null;
           break;
@@ -905,9 +955,23 @@ function registerSocketHandlers(io, roomManager) {
             if (cIdx !== -1) {
               const [moved] = fromArr.splice(cIdx, 1);
               state.regions[data.toRegion][pIdx].push(moved);
-              state.log.push(
-                `Ahri: Moved ${getCardById(data.cardId)?.champion} from ${data.fromRegion} to ${data.toRegion}.`,
-              );
+              const movedChampion = getCardById(moved.id)?.champion || "card";
+              if (moved.faceUp) {
+                state.log.push(
+                  `Ahri: Moved ${movedChampion} from ${data.fromRegion} to ${data.toRegion}.`,
+                );
+              } else {
+                state.log.push({
+                  m0:
+                    pIdx === 0
+                      ? `Ahri: Moved ${movedChampion} from ${data.fromRegion} to ${data.toRegion}.`
+                      : `Ahri: Moved a facedown card from ${data.fromRegion} to ${data.toRegion}.`,
+                  m1:
+                    pIdx === 1
+                      ? `Ahri: Moved ${movedChampion} from ${data.fromRegion} to ${data.toRegion}.`
+                      : `Ahri: Moved a facedown card from ${data.fromRegion} to ${data.toRegion}.`,
+                });
+              }
             }
           }
           state.pendingAbility = null;
@@ -925,9 +989,18 @@ function registerSocketHandlers(io, roomManager) {
                 const [returned] = fromArr.splice(cIdx, 1);
                 state.hands[pIdx].push(getCardById(returned.id));
                 state.extraTurn[pIdx] = true;
-                state.log.push(
-                  `Yasuo: Returned ${getCardById(data.cardId)?.champion} to hand. Extra turn granted!`,
-                );
+                const returnedChampion =
+                  getCardById(returned.id)?.champion || "card";
+                state.log.push({
+                  m0:
+                    pIdx === 0
+                      ? `Yasuo: Returned ${returnedChampion} to hand. Extra turn granted!`
+                      : "Yasuo: Returned a facedown card to hand. Extra turn granted!",
+                  m1:
+                    pIdx === 1
+                      ? `Yasuo: Returned ${returnedChampion} to hand. Extra turn granted!`
+                      : "Yasuo: Returned a facedown card to hand. Extra turn granted!",
+                });
               }
             }
           } else {

@@ -8,6 +8,15 @@ function adjacentRegions(regionName) {
   return adj;
 }
 
+function topActiveSwainIndex(cards) {
+  if (!Array.isArray(cards) || cards.length === 0) return -1;
+  for (let i = cards.length - 1; i >= 0; i--) {
+    const c = cards[i];
+    if (c && c.faceUp && c.id === "N4") return i;
+  }
+  return -1;
+}
+
 // Returns total strength for a player in a region, applying Ongoing effects
 function calcStrength(state, regionName, playerIdx) {
   const myCards = state.regions[regionName][playerIdx];
@@ -30,8 +39,11 @@ function calcStrength(state, regionName, playerIdx) {
     }
   }
 
+  const swainIdx = topActiveSwainIndex(myCards);
+
   let total = 0;
-  for (const c of myCards) {
+  for (let idx = 0; idx < myCards.length; idx++) {
+    const c = myCards[idx];
     const cardDef = getCardById(c.id);
     let str = c.faceUp ? cardDef.strength : 2;
 
@@ -41,8 +53,8 @@ function calcStrength(state, regionName, playerIdx) {
     );
     if (!c.faceUp && zedActive) str = 4;
 
-    // N4 Swain: cards under Swain become strength 4
-    if (c.coveredBySwain) str = 4;
+    // N4 Swain: cards covered by Swain become strength 4 (Swain must be face-up)
+    if (swainIdx !== -1 && idx < swainIdx) str = 4;
 
     total += str;
   }
