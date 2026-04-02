@@ -1262,10 +1262,45 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
   text-shadow: 0 0 10px rgba(255, 56, 56, 0.4);
 }
 .score-vs {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
   font-family: "Cinzel", serif;
   font-size: 0.8rem;
   color: var(--gold-dim);
   align-self: center;
+}
+
+.score-vs-label {
+  position: relative;
+  z-index: 1;
+  letter-spacing: 0.06em;
+}
+
+.turn-timer-svg {
+  position: absolute;
+  inset: 0;
+  width: 42px;
+  height: 42px;
+  transform: rotate(-90deg);
+}
+
+.turn-timer-track {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 3;
+}
+
+.turn-timer-progress {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 0 9999;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.12s linear;
 }
 .round-badge {
   font-size: 0.68rem;

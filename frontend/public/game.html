@@ -28,7 +28,29 @@
               </div>
             </div>
 
-            <div class="score-vs">VS</div>
+            <div class="score-vs" id="turnTimer" aria-label="Turn timer">
+              <svg
+                class="turn-timer-svg"
+                viewBox="0 0 40 40"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <circle
+                  class="turn-timer-track"
+                  cx="20"
+                  cy="20"
+                  r="18"
+                ></circle>
+                <circle
+                  class="turn-timer-progress"
+                  id="turnTimerProgress"
+                  cx="20"
+                  cy="20"
+                  r="18"
+                ></circle>
+              </svg>
+              <span class="score-vs-label">VS</span>
+            </div>
 
             <div class="score-block opp-score" id="oppScoreBlock">
               <div class="score-points">

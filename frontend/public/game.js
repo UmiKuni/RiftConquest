@@ -15,6 +15,142 @@ let myIndex = null;
 let selectedCard = null;
 let deployFaceDown = false;
 
+// ─── Turn Timer UI (40s circular indicator) ───────────────────────────────
+// Server enforces a turn timer (default 40s). Client UI approximates the
+// countdown and restarts when the same state transitions occur.
+const TURN_TIMEOUT_MS = 40000;
+const TURN_TIMER_TICK_MS = 100;
+
+const turnTimerUi = {
+  key: "",
+  startedAtMs: 0,
+  durationMs: TURN_TIMEOUT_MS,
+  running: false,
+  tick: null,
+  circumference: null,
+};
+
+function actingPlayerIndexForTurnTimer(s) {
+  if (!s) return null;
+  if (s.pendingAbility) {
+    if (s.pendingAbility.type === "N5_opp_flip") {
+      return 1 - s.pendingAbility.playerIdx;
+    }
+    return s.pendingAbility.playerIdx;
+  }
+  return s.currentTurn;
+}
+
+function turnTimerKeyForState(s) {
+  if (!s) return "";
+  const actor = actingPlayerIndexForTurnTimer(s);
+  const pendingType = s.pendingAbility ? s.pendingAbility.type : "";
+  const pendingPlayerIdx = s.pendingAbility ? s.pendingAbility.playerIdx : "";
+  return `${s.phase}|r${s.round}|t${s.currentTurn}|a${actor}|p${pendingType}|pp${pendingPlayerIdx}`;
+}
+
+function ensureTurnTimerGeometry(progressEl) {
+  if (!progressEl || turnTimerUi.circumference != null) return;
+  const r =
+    progressEl.r &&
+    progressEl.r.baseVal &&
+    Number.isFinite(progressEl.r.baseVal.value)
+      ? progressEl.r.baseVal.value
+      : 18;
+  const c = 2 * Math.PI * r;
+  turnTimerUi.circumference = c;
+  // Non-zero CSS lengths must include units; use px for broad compatibility.
+  progressEl.style.strokeDasharray = `${c}px ${c}px`;
+  progressEl.style.strokeDashoffset = "0px";
+}
+
+function setTurnTimerFraction(fraction) {
+  const progressEl = document.getElementById("turnTimerProgress");
+  if (!progressEl) return;
+
+  ensureTurnTimerGeometry(progressEl);
+
+  const c = turnTimerUi.circumference;
+  if (!c) return;
+
+  const clamped = Math.max(0, Math.min(1, fraction));
+  // Full ring at start, empties as time runs out.
+  progressEl.style.strokeDashoffset = `${c * (1 - clamped)}px`;
+}
+
+function stopTurnTimerLoop() {
+  if (turnTimerUi.tick) {
+    clearInterval(turnTimerUi.tick);
+    turnTimerUi.tick = null;
+  }
+}
+
+function updateTurnTimerUiNow() {
+  const hostEl = document.getElementById("turnTimer");
+  if (!turnTimerUi.running || !hostEl) return;
+
+  const elapsed = Date.now() - turnTimerUi.startedAtMs;
+  const remainingMs = Math.max(0, turnTimerUi.durationMs - elapsed);
+  const fraction = remainingMs / turnTimerUi.durationMs;
+
+  setTurnTimerFraction(fraction);
+
+  const remainingSec = Math.ceil(remainingMs / 1000);
+  hostEl.title = `${remainingSec}s`;
+  hostEl.setAttribute("aria-label", `Turn timer: ${remainingSec}s remaining`);
+}
+
+function startTurnTimerLoop() {
+  if (turnTimerUi.tick) return;
+  turnTimerUi.tick = setInterval(() => {
+    if (!turnTimerUi.running) {
+      stopTurnTimerLoop();
+      return;
+    }
+    updateTurnTimerUiNow();
+  }, TURN_TIMER_TICK_MS);
+}
+
+function syncTurnTimerFromState(s) {
+  if (!s || s.phase !== "playing") {
+    turnTimerUi.running = false;
+    stopTurnTimerLoop();
+    setTurnTimerFraction(1);
+
+    const hostEl = document.getElementById("turnTimer");
+    if (hostEl) {
+      hostEl.title = "";
+      hostEl.setAttribute("aria-label", "Turn timer");
+    }
+    return;
+  }
+
+  const actor = actingPlayerIndexForTurnTimer(s);
+  if (actor !== 0 && actor !== 1) {
+    turnTimerUi.running = false;
+    stopTurnTimerLoop();
+    setTurnTimerFraction(1);
+
+    const hostEl = document.getElementById("turnTimer");
+    if (hostEl) {
+      hostEl.title = "";
+      hostEl.setAttribute("aria-label", "Turn timer");
+    }
+    return;
+  }
+
+  const key = turnTimerKeyForState(s);
+  if (key !== turnTimerUi.key) {
+    turnTimerUi.key = key;
+    turnTimerUi.startedAtMs = Date.now();
+    turnTimerUi.durationMs = TURN_TIMEOUT_MS;
+  }
+
+  turnTimerUi.running = true;
+  startTurnTimerLoop();
+  updateTurnTimerUiNow();
+}
+
 function makeMdiIcon(iconClass, extraClass = "") {
   const el = document.createElement("span");
   el.className = `mdi ${iconClass} ui-icon${extraClass ? " " + extraClass : ""}`;
@@ -245,6 +381,9 @@ function render() {
     const vpOppScores = retreatVPMap[Math.min(s.opponentHandCount, 6)] || 2;
     hintEl.textContent = `(Opponent scores +${vpOppScores} VP)`;
   }
+
+  // Turn timer ring (40s) in the header.
+  syncTurnTimerFromState(s);
 
   // Status bar
   const sb = document.getElementById("statusBar");
