@@ -6,6 +6,59 @@ A 2-player online card game where you deploy champions, contest regions, and rac
 - **Ranked** (optional): login + Rift Points (RP) + leaderboard + match history
 - **Tech**: Node.js + Express + Socket.io + vanilla HTML/CSS/JS
 
+## Play online
+
+- https://riftconquest-web.onrender.com/
+
+## How to play (rules)
+
+### Goal
+
+- Be the first player to reach **12 VP**.
+
+### Setup (each round)
+
+- The deck has **18 cards**. Shuffle, then deal **6 cards** to each player.
+- Regions are in a line: **Noxus ↔ Demacia ↔ Ionia** (only neighbors are “adjacent”).
+- One player has **initiative** (goes first). Round 1 is random; then initiative alternates each round.
+
+### On your turn
+
+Choose **one** action:
+
+1. **Deploy a card**
+
+- **Face-up**: normally must be played to its **matching region**.
+- **Face-down**: can be played to **any** region, counts as **STR 2**, and has **no ability**.
+
+2. **Retreat** (Withdraw)
+
+- End the round immediately. Your opponent scores VP based on how many cards they still have in hand.
+
+### Card types
+
+- **Instant**: triggers when played **face-up** (may prompt for a choice).
+- **Ongoing**: applies while the card stays **face-up** on the board.
+- **None**: no ability.
+
+### End of round + scoring
+
+- If a player **retreats**, the other player gains VP based on the _winner’s_ remaining hand size:
+
+| Opponent cards remaining | VP gained |
+| -----------------------: | --------: |
+|                        0 |         6 |
+|                        1 |         5 |
+|                        2 |         4 |
+|                        3 |         3 |
+|                      4–6 |         2 |
+
+- Otherwise, the round ends when both players run out of cards.
+- At round end, each region is controlled by the player with higher total strength in that region.
+  - **Face-down cards** count as STR 2.
+  - Ongoing effects may modify strength.
+- The player who controls **more regions** gains **6 VP**. If tied, **initiative** breaks the tie.
+
 ## Quick start (local)
 
 ### Prerequisites
@@ -55,11 +108,11 @@ Casual games work without Firebase.
 
 Ranked features require:
 
-1) **Client Firebase config**
+1. **Client Firebase config**
 
 - Edit `frontend/public/firebase-config.js` and replace `window.FIREBASE_CONFIG` with your own Firebase project’s Web config.
 
-2) **Server Firebase Admin credentials**
+2. **Server Firebase Admin credentials**
 
 The server uses the Admin SDK to verify ID tokens and write to Firestore.
 
@@ -90,19 +143,19 @@ This project is a **stateful** Socket.io server with **in-memory rooms**.
 
 ### Steps
 
-1) Push your repo to GitHub
-2) Render → **New** → **Web Service** → connect the repo
-3) Settings:
+1. Push your repo to GitHub
+2. Render → **New** → **Web Service** → connect the repo
+3. Settings:
 
 - **Build Command**: `npm ci`
 - **Start Command**: `npm start`
 
-4) Environment:
+4. Environment:
 
 - Render automatically provides `PORT` — do not hardcode `3001` in production
 - (Optional) `NODE_ENV=production`
 
-5) Firebase Admin (for ranked features):
+5. Firebase Admin (for ranked features):
 
 - Render → Environment → **Secret Files**:
   - Create: `/etc/secrets/firebase-service-account.json`
@@ -110,7 +163,7 @@ This project is a **stateful** Socket.io server with **in-memory rooms**.
 - Render → Environment → **Environment Variables**:
   - `FIREBASE_SERVICE_ACCOUNT_PATH=/etc/secrets/firebase-service-account.json`
 
-6) Firebase Console → Authentication → **Authorized domains**:
+6. Firebase Console → Authentication → **Authorized domains**:
 
 - Add `your-service-name.onrender.com` (and your custom domain if you use one)
 
