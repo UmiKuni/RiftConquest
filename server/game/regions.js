@@ -1,10 +1,24 @@
 const { REGIONS, getCardById } = require("./cards");
 
-function adjacentRegions(regionName) {
-  const idx = REGIONS.indexOf(regionName);
+function getRegionOrder(state) {
+  const order =
+    state && Array.isArray(state.regionOrder) ? state.regionOrder : null;
+  if (
+    order &&
+    order.length === REGIONS.length &&
+    REGIONS.every((r) => order.includes(r))
+  ) {
+    return order;
+  }
+  return REGIONS;
+}
+
+function adjacentRegions(state, regionName) {
+  const order = getRegionOrder(state);
+  const idx = order.indexOf(regionName);
   const adj = [];
-  if (idx > 0) adj.push(REGIONS[idx - 1]);
-  if (idx < REGIONS.length - 1) adj.push(REGIONS[idx + 1]);
+  if (idx > 0) adj.push(order[idx - 1]);
+  if (idx >= 0 && idx < order.length - 1) adj.push(order[idx + 1]);
   return adj;
 }
 
@@ -64,7 +78,7 @@ function calcStrength(state, regionName, playerIdx) {
     (o) => o.card.id === "D1" && o.player === playerIdx,
   );
   if (luxActive) {
-    const luxAdj = adjacentRegions(luxActive.region);
+    const luxAdj = adjacentRegions(state, luxActive.region);
     if (luxAdj.includes(regionName)) total += 3;
   }
 

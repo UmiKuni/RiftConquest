@@ -1,6 +1,18 @@
 const socket = io();
 const REGIONS = ["Noxus", "Demacia", "Ionia"];
 
+function getRegionOrder(s) {
+  const order = s && Array.isArray(s.regionOrder) ? s.regionOrder : null;
+  if (
+    order &&
+    order.length === REGIONS.length &&
+    REGIONS.every((r) => order.includes(r))
+  ) {
+    return order;
+  }
+  return REGIONS;
+}
+
 const { busyPush, busyPop, identity, attachFirebaseAuthToSocket } =
   window.rcShared;
 const { getOrCreateDisplayName } = identity;
@@ -508,7 +520,7 @@ function renderBoard(s) {
   const board = document.getElementById("board");
   board.innerHTML = "";
 
-  for (const region of REGIONS) {
+  for (const region of getRegionOrder(s)) {
     const col = document.createElement("div");
     col.className = "region-col";
     col.setAttribute("data-region", region);
@@ -659,7 +671,7 @@ function buildBoardCard(c, playerIdx, region, s, isUncovered) {
   // Flip target highlight
   if (
     s.pendingAbility &&
-    isFlipTarget(s.pendingAbility, region, playerIdx, myIndex, isUncovered)
+    isFlipTarget(s.pendingAbility, region, playerIdx, myIndex, isUncovered, s)
   ) {
     card.classList.add("flip-target");
     card.style.cursor = "crosshair";
@@ -676,7 +688,7 @@ function buildBoardCard(c, playerIdx, region, s, isUncovered) {
   return card;
 }
 
-function isFlipTarget(ab, region, cardPlayer, myIdx, isUncovered) {
+function isFlipTarget(ab, region, cardPlayer, myIdx, isUncovered, s) {
   if (!ab) return false;
 
   // All flip abilities only target uncovered cards
@@ -684,7 +696,7 @@ function isFlipTarget(ab, region, cardPlayer, myIdx, isUncovered) {
 
   if (ab.type === "flip_any" && ab.playerIdx === myIdx) return true;
   if (ab.type === "flip_adjacent" && ab.playerIdx === myIdx) {
-    return adjacentTo(ab.playedRegion, region);
+    return adjacentTo(ab.playedRegion, region, s);
   }
   if (ab.type === "N5_opp_flip" && ab.playerIdx !== myIdx)
     return cardPlayer === myIdx;
@@ -698,7 +710,9 @@ function calcStrengthClient(s, region, playerIdx) {
   const cards = s.regions[region][playerIdx] || [];
   let total = 0;
 
-  const zedActive = REGIONS.some((r) =>
+  const order = getRegionOrder(s);
+
+  const zedActive = order.some((r) =>
     (s.regions[r][playerIdx] || []).some((c) => c.faceUp && c.id === "I2"),
   );
   const luxRegion = findCardRegion(s, "D1", playerIdx);
@@ -721,12 +735,12 @@ function calcStrengthClient(s, region, playerIdx) {
     if (swainIdx !== -1 && idx < swainIdx) str = 4;
     total += str;
   }
-  if (luxRegion && adjacentTo(luxRegion, region)) total += 3;
+  if (luxRegion && adjacentTo(luxRegion, region, s)) total += 3;
   return total;
 }
 
 function findCardRegion(s, cardId, playerIdx) {
-  for (const r of REGIONS) {
+  for (const r of getRegionOrder(s)) {
     if (
       (s.regions[r][playerIdx] || []).some((c) => c.id === cardId && c.faceUp)
     )
@@ -734,8 +748,12 @@ function findCardRegion(s, cardId, playerIdx) {
   }
   return null;
 }
-function adjacentTo(r1, r2) {
-  return Math.abs(REGIONS.indexOf(r1) - REGIONS.indexOf(r2)) === 1;
+function adjacentTo(r1, r2, s = gameState) {
+  const order = getRegionOrder(s);
+  const i1 = order.indexOf(r1);
+  const i2 = order.indexOf(r2);
+  if (i1 < 0 || i2 < 0) return false;
+  return Math.abs(i1 - i2) === 1;
 }
 
 // ─── Hand ─────────────────────────────────────────────────────────────────
@@ -998,7 +1016,8 @@ function openAbilityModal(ability, customLabel) {
       let step = "pick";
       let pickedCard = null;
       let pickedFrom = null;
-      for (const r of REGIONS) {
+      const order = getRegionOrder(gameState);
+      for (const r of order) {
         const myCardsInR = gameState.regions[r][myIndex] || [];
         for (const c of myCardsInR) {
           const def = getCardDef(c.id);
@@ -1014,7 +1033,7 @@ function openAbilityModal(ability, customLabel) {
             step = "dest";
             opts.innerHTML = "";
             desc.textContent = `Move ${def.champion} to which region?`;
-            for (const dr of REGIONS) {
+            for (const dr of order) {
               if (dr === r) continue;
               const d = mkModalOption(
                 dr,
@@ -1047,7 +1066,8 @@ function openAbilityModal(ability, customLabel) {
       desc.textContent =
         "Return an uncovered facedown card to hand and gain an extra turn, or skip.";
       let anyFound = false;
-      for (const r of REGIONS) {
+      const order = getRegionOrder(gameState);
+      for (const r of order) {
         const myCardsInR = gameState.regions[r][myIndex] || [];
         if (myCardsInR.length > 0) {
           const c = myCardsInR[myCardsInR.length - 1]; // Only the uncovered card
@@ -1362,9 +1382,10 @@ function getImgExt(id) {
 }
 
 function adjacentRegions(r) {
-  const i = REGIONS.indexOf(r);
+  const order = getRegionOrder(gameState);
+  const i = order.indexOf(r);
   const adj = [];
-  if (i > 0) adj.push(REGIONS[i - 1]);
-  if (i < REGIONS.length - 1) adj.push(REGIONS[i + 1]);
+  if (i > 0) adj.push(order[i - 1]);
+  if (i >= 0 && i < order.length - 1) adj.push(order[i + 1]);
   return adj;
 }

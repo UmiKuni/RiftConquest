@@ -51,7 +51,7 @@ function applyInstantAbility(state, cardId, playerIdx, playedRegion) {
     case "D3":
     case "I3": {
       // Darius / Garen / Shen — flip a card in an adjacent region
-      const adj = adjacentRegions(playedRegion);
+      const adj = adjacentRegions(state, playedRegion);
       if (hasValidFlipTargets(state, adj, [0, 1])) {
         return {
           state,

@@ -19,7 +19,7 @@ A 2-player online card game where you deploy champions, contest regions, and rac
 ### Setup (each round)
 
 - The deck has **18 cards**. Shuffle, then deal **6 cards** to each player.
-- Regions are in a line: **Noxus ↔ Demacia ↔ Ionia** (only neighbors are “adjacent”).
+- The 3 regions (**Noxus**, **Demacia**, **Ionia**) form a line and **shuffle order each round** (different from the previous round). Only left/right neighbors are “adjacent”.
 - One player has **initiative** (goes first). Round 1 is random; then initiative alternates each round.
 
 ### On your turn

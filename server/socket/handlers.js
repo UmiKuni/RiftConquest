@@ -727,7 +727,7 @@ function registerSocketHandlers(io, roomManager) {
 
       if (ireliaRegions.length > 0) {
         const isAdjacentToIrelia = ireliaRegions.some((r) =>
-          adjacentRegions(r).includes(regionName),
+          adjacentRegions(state, r).includes(regionName),
         );
 
         if (isAdjacentToIrelia) {
@@ -823,7 +823,7 @@ function registerSocketHandlers(io, roomManager) {
               : "Noxus";
           const targetRegion =
             data && typeof data.regionName === "string" ? data.regionName : "";
-          const allowedRegions = adjacentRegions(playedRegion);
+          const allowedRegions = adjacentRegions(state, playedRegion);
           const isValidDeployTarget =
             targetRegion &&
             REGIONS.includes(targetRegion) &&
