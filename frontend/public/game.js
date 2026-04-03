@@ -26,6 +26,93 @@ let gameState = null;
 let myIndex = null;
 let selectedCard = null;
 let deployFaceDown = false;
+let lastRenderedRound = null;
+
+// ─── Round Intro UI (Round title only) ─────────────────────────────────────
+const ROUND_INTRO_TITLE_MS = 900;
+
+const roundIntroUi = {
+  round: null,
+  token: 0,
+  timers: [],
+  doneSentRound: null,
+};
+
+function getRoundIntroEls() {
+  const overlay = document.getElementById("roundIntroOverlay");
+  const title = document.getElementById("roundIntroTitle");
+  if (!overlay || !title) return null;
+  return { overlay, title };
+}
+
+function clearRoundIntroTimers() {
+  for (const t of roundIntroUi.timers) clearTimeout(t);
+  roundIntroUi.timers = [];
+}
+
+function resetRoundIntroDom(els) {
+  if (!els) return;
+  els.title.classList.add("hidden");
+  els.title.classList.remove("play");
+}
+
+function hideRoundIntroOverlay() {
+  const els = getRoundIntroEls();
+  if (!els) return;
+
+  roundIntroUi.token++;
+  clearRoundIntroTimers();
+  resetRoundIntroDom(els);
+  els.overlay.classList.add("hidden");
+  els.overlay.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("round-intro-active");
+  roundIntroUi.round = null;
+}
+
+function syncRoundIntroOverlayFromState(s) {
+  const els = getRoundIntroEls();
+  if (!els) return;
+
+  if (!s || s.phase !== "roundIntro") {
+    if (!els.overlay.classList.contains("hidden")) hideRoundIntroOverlay();
+    return;
+  }
+
+  // Always block interactions while the server says we're in the intro.
+  document.body.classList.add("round-intro-active");
+  els.overlay.classList.remove("hidden");
+  els.overlay.setAttribute("aria-hidden", "false");
+
+  const round = s.round;
+  if (roundIntroUi.round === round) return;
+
+  roundIntroUi.round = round;
+  roundIntroUi.token++;
+  clearRoundIntroTimers();
+  resetRoundIntroDom(els);
+
+  const token = roundIntroUi.token;
+
+  els.title.textContent = `Round ${round}`;
+  els.title.classList.remove("hidden");
+  els.title.classList.remove("play");
+  // Restart CSS animation.
+  void els.title.offsetWidth;
+  els.title.classList.add("play");
+
+  const t1 = setTimeout(() => {
+    if (token !== roundIntroUi.token) return;
+    els.title.classList.add("hidden");
+    els.title.classList.remove("play");
+
+    if (roundIntroUi.doneSentRound !== round) {
+      roundIntroUi.doneSentRound = round;
+      socket.emit("roundIntroDone", { round });
+    }
+  }, ROUND_INTRO_TITLE_MS);
+
+  roundIntroUi.timers.push(t1);
+}
 
 // ─── Turn Timer UI (40s circular indicator) ───────────────────────────────
 // Server enforces a turn timer (default 40s). Client UI approximates the
@@ -312,6 +399,19 @@ function render() {
   if (!gameState) return;
   const s = gameState;
 
+  // Round intro overlay (blocks input while phase === 'roundIntro').
+  syncRoundIntroOverlayFromState(s);
+
+  // Reset per-round UI-only state (prevents stale selection across rounds).
+  if (typeof s.round === "number" && s.round !== lastRenderedRound) {
+    lastRenderedRound = s.round;
+    selectedCard = null;
+    deployFaceDown = false;
+    const btnFaceDown = document.getElementById("btnFaceDown");
+    if (btnFaceDown) btnFaceDown.classList.add("hidden");
+    setFaceDownButtonState(false);
+  }
+
   // Player display names (server-sanitized; render via textContent)
   const names = Array.isArray(s.playerDisplayNames) ? s.playerDisplayNames : [];
   const isRanked = s.mode === "ranked";
@@ -463,7 +563,10 @@ function render() {
   }
 
   if (s.phase !== "roundEnd") {
-    if (s.pendingAbility) {
+    if (s.phase === "roundIntro") {
+      sb.className = "status-bar pending";
+      setElIconText(sb, "mdi-cards", `Round ${s.round} - get ready...`);
+    } else if (s.pendingAbility) {
       const ab = s.pendingAbility;
       const responderIdx =
         ab.type === "N5_opp_flip" ? 1 - ab.playerIdx : ab.playerIdx;

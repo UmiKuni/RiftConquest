@@ -1193,6 +1193,58 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
     var(--bg-deep);
 }
 
+/* ── ROUND INTRO OVERLAY (Round title only) ─────────────────────────────── */
+body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
+  pointer-events: none;
+  user-select: none;
+}
+
+.round-intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+}
+
+.round-intro-title {
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  color: var(--gold-light);
+  text-align: center;
+  pointer-events: none;
+  text-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.8),
+    0 0 18px var(--border-glow);
+}
+
+.round-intro-title.play {
+  animation: roundIntroTitleInOut 1.2s ease forwards;
+}
+
+@keyframes roundIntroTitleInOut {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(1.02);
+  }
+}
+
 /* ── LEFT PANEL ──────────────────────────────────────────────────────────── */
 .game-left {
   flex: 1;

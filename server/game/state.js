@@ -42,12 +42,13 @@ function nextRegionOrder(prevOrder) {
 
 function createGameState(initiative = 0) {
   return {
-    phase: "playing", // 'playing' | 'roundEnd' | 'gameOver'
+    phase: "playing", // 'roundIntro' | 'playing' | 'roundEnd' | 'gameOver'
     round: 0,
     currentTurn: initiative, // 0 or 1 (index of player whose turn it is)
     initiative: initiative, // who goes first next round
     scores: [0, 0],
     regionOrder: [...REGIONS],
+    roundIntro: null,
     deck: [],
     hands: [[], []],
     withdrawn: [false, false],
@@ -65,7 +66,9 @@ function createGameState(initiative = 0) {
   };
 }
 
-function startNewRound(state) {
+function startNewRound(state, opts = {}) {
+  const waitForRejoin = !!opts.waitForRejoin;
+
   state.regionOrder = nextRegionOrder(state.regionOrder);
 
   const deck = shuffle([...CARDS]);
@@ -87,7 +90,12 @@ function startNewRound(state) {
 
   state.currentTurn = state.initiative;
   state.round++;
-  state.phase = "playing";
+  state.phase = "roundIntro";
+  state.roundIntro = {
+    round: state.round,
+    joined: waitForRejoin ? [false, false] : [true, true],
+    done: [false, false],
+  };
   state.log.push(
     `--- Round ${state.round} begins. Player ${state.initiative + 1} has initiative ---`,
   );

@@ -120,12 +120,13 @@ function registerSocketHandlers(io, roomManager) {
 
     const startingInitiative = Math.floor(Math.random() * 2);
     room.state = createGameState(startingInitiative);
-    startNewRound(room.state);
+    startNewRound(room.state, { waitForRejoin: true });
 
     // Tell each player their assigned index for redirect.
     sockA.emit("gameStarted", { code, playerIndex: 0 });
     sockB.emit("gameStarted", { code, playerIndex: 1 });
 
+    scheduleRoundIntroFallback(code, room);
     refreshTurnTimer(code, room);
     console.log(
       `Ranked match found: Room ${code} (${sockA.id} vs ${sockB.id})`,
@@ -210,6 +211,12 @@ function registerSocketHandlers(io, roomManager) {
     5000,
     5 * 60 * 1000,
   );
+  const ROUND_INTRO_FALLBACK_MS = readDurationMs(
+    process.env.ROUND_INTRO_FALLBACK_MS,
+    5000,
+    1000,
+    30 * 1000,
+  );
   const DISCONNECT_FORFEIT_MS = readDurationMs(
     process.env.DISCONNECT_FORFEIT_MS,
     60000,
@@ -245,6 +252,63 @@ function registerSocketHandlers(io, roomManager) {
       room.turnTimer = null;
     }
     room.turnTimerKey = null;
+  }
+
+  function clearRoundIntroTimer(room) {
+    if (!room) return;
+    if (room.roundIntroTimer) {
+      clearTimeout(room.roundIntroTimer);
+      room.roundIntroTimer = null;
+    }
+    room.roundIntroKey = null;
+  }
+
+  function beginRoundPlay(code, room) {
+    if (!room || !room.state) return;
+    if (room.state.phase !== "roundIntro") return;
+
+    room.state.phase = "playing";
+    room.state.roundIntro = null;
+    clearRoundIntroTimer(room);
+
+    roomManager.broadcastState(code);
+    refreshTurnTimer(code, room);
+  }
+
+  function scheduleRoundIntroFallback(code, room) {
+    if (!room || !room.state) return;
+    const state = room.state;
+
+    if (state.phase !== "roundIntro") {
+      clearRoundIntroTimer(room);
+      return;
+    }
+
+    // Avoid ending intro while clients are still navigating lobby -> game.
+    const intro = state.roundIntro;
+    if (
+      intro &&
+      Array.isArray(intro.joined) &&
+      (intro.joined[0] !== true || intro.joined[1] !== true)
+    ) {
+      clearRoundIntroTimer(room);
+      return;
+    }
+
+    const key = `r${state.round}`;
+    if (room.roundIntroTimer && room.roundIntroKey === key) return;
+
+    clearRoundIntroTimer(room);
+    room.roundIntroKey = key;
+
+    room.roundIntroTimer = setTimeout(() => {
+      const live = rooms[code];
+      if (!live || !live.state) return;
+      if (live.state.phase !== "roundIntro") return;
+      if (`r${live.state.round}` !== key) return;
+
+      beginRoundPlay(code, live);
+    }, ROUND_INTRO_FALLBACK_MS);
   }
 
   function clearDisconnectTimer(room, playerIdx) {
@@ -290,6 +354,7 @@ function registerSocketHandlers(io, roomManager) {
       if (bothDisconnected) {
         clearAllDisconnectTimers(live);
         clearTurnTimer(live);
+        clearRoundIntroTimer(live);
         delete rooms[code];
         console.log(`Room ${code} ended as No Contest (both disconnected).`);
         return;
@@ -614,12 +679,52 @@ function registerSocketHandlers(io, roomManager) {
       // Start game
       const startingInitiative = Math.floor(Math.random() * 2);
       room.state = createGameState(startingInitiative);
-      startNewRound(room.state);
+      startNewRound(room.state, { waitForRejoin: true });
 
       io.to(code).emit("gameStarted", { code });
       roomManager.broadcastState(code);
+      scheduleRoundIntroFallback(code, room);
       refreshTurnTimer(code, room);
       console.log(`Room ${code} — game started`);
+    });
+
+    // ROUND INTRO DONE (client finished local title intro)
+    socket.on("roundIntroDone", (payload) => {
+      const found = roomManager.getRoomOfSocket(socket.id);
+      if (!found) return;
+      const { code, room } = found;
+      const state = room.state;
+      const pIdx = roomManager.playerIndexOf(room, socket.id);
+
+      if (!state || state.phase !== "roundIntro") return;
+      if (pIdx !== 0 && pIdx !== 1) return;
+      if (!state.roundIntro) return;
+
+      const roundRaw = payload ? payload.round : null;
+      const round =
+        typeof roundRaw === "number"
+          ? roundRaw
+          : parseInt(String(roundRaw ?? ""), 10);
+
+      if (!Number.isFinite(round) || round !== state.roundIntro.round) return;
+
+      if (Array.isArray(state.roundIntro.joined)) {
+        state.roundIntro.joined[pIdx] = true;
+      }
+      if (Array.isArray(state.roundIntro.done)) {
+        state.roundIntro.done[pIdx] = true;
+      }
+
+      // Keep a fallback in case one client misses the intro ack.
+      scheduleRoundIntroFallback(code, room);
+
+      if (
+        Array.isArray(state.roundIntro.done) &&
+        state.roundIntro.done[0] &&
+        state.roundIntro.done[1]
+      ) {
+        beginRoundPlay(code, room);
+      }
     });
 
     // EMOJI REACTIONS (non-gameplay)
@@ -1070,6 +1175,15 @@ function registerSocketHandlers(io, roomManager) {
         `Player ${playerIndex + 1} rejoined room ${code} with socket ${socket.id}`,
       );
       if (room.state) {
+        // Round intro gate: mark this side as rejoined.
+        if (
+          room.state.phase === "roundIntro" &&
+          room.state.roundIntro &&
+          Array.isArray(room.state.roundIntro.joined)
+        ) {
+          room.state.roundIntro.joined[playerIndex] = true;
+        }
+
         // Re-attach UID mapping on rejoin (helps if auth arrived late).
         if (socket.data.firebaseUser && socket.data.firebaseUser.uid) {
           if (socket.data.firebaseUser.isAnonymous === false)
@@ -1083,6 +1197,7 @@ function registerSocketHandlers(io, roomManager) {
           setRoomPlayerElo(room, playerIndex, socket.data.profileStats.elo);
         }
         roomManager.broadcastState(code);
+        scheduleRoundIntroFallback(code, room);
         refreshTurnTimer(code, room);
       }
     });
@@ -1126,9 +1241,10 @@ function registerSocketHandlers(io, roomManager) {
           room.state.readyForNextRound[1]
         ) {
           room.state.initiative = 1 - room.state.initiative;
-          startNewRound(room.state);
+          startNewRound(room.state, { waitForRejoin: false });
         }
         roomManager.broadcastState(code);
+        scheduleRoundIntroFallback(code, room);
         refreshTurnTimer(code, room);
       }
     });
@@ -1192,6 +1308,7 @@ function registerSocketHandlers(io, roomManager) {
 
           clearAllDisconnectTimers(live);
           clearTurnTimer(live);
+          clearRoundIntroTimer(live);
           delete rooms[code];
           console.log(
             `Room ${code} removed after grace period (player ${playerIdx + 1} gone).`,
@@ -1209,6 +1326,7 @@ function registerSocketHandlers(io, roomManager) {
 
           clearAllDisconnectTimers(live);
           clearTurnTimer(live);
+          clearRoundIntroTimer(live);
           delete rooms[code];
           console.log(`Room ${code} cleaned up after game over.`);
         }, LOBBY_DISCONNECT_GRACE_MS);
