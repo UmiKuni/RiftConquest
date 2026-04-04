@@ -14,20 +14,11 @@ const {
   recordMatch,
 } = require("../persistence/firestore");
 
+const { sanitizeDisplayName } = require("../utils/sanitize");
+
 const ALLOWED_EMOJI_REACTIONS = new Set(["haha", "like", "sad"]);
 const EMOJI_RATE_WINDOW_MS = 5000;
 const EMOJI_RATE_MAX = 3;
-
-const DISPLAY_NAME_MAX_LEN = 16;
-
-function sanitizeDisplayName(raw) {
-  if (typeof raw !== "string") return "";
-  let name = raw.trim().replace(/\s+/g, " ");
-  name = name.replace(/[^a-zA-Z0-9 _-]/g, "");
-  if (name.length > DISPLAY_NAME_MAX_LEN)
-    name = name.slice(0, DISPLAY_NAME_MAX_LEN);
-  return name;
-}
 
 function setRoomPlayerDisplayName(room, playerIdx, rawName) {
   if (!room || (playerIdx !== 0 && playerIdx !== 1)) return;
@@ -235,6 +226,9 @@ function registerSocketHandlers(io, roomManager) {
     return state.currentTurn;
   }
 
+  // NOTE: This key format MUST be kept in sync with turnTimerKeyForState
+  // in frontend/public/game.js — both files compute the same key independently
+  // (no shared module possible without a build step).
   function turnTimerKeyForState(state) {
     if (!state) return "";
     const actor = actingPlayerIndexForState(state);
@@ -989,10 +983,21 @@ function registerSocketHandlers(io, roomManager) {
         case "flip_any":
         case "flip_adjacent": {
           // data: { targetCardId, targetRegion, targetPlayer }
-          const target = state.regions[data.targetRegion]?.[
-            data.targetPlayer
-          ]?.find((c) => c.id === data.targetCardId);
-          if (target) {
+          // Only the topmost (uncovered) card in a stack may be flipped.
+          if (ability.type === "flip_adjacent") {
+            // Validate the chosen region is actually adjacent to the played region.
+            const adj = adjacentRegions(state, ability.playedRegion);
+            if (!adj.includes(data.targetRegion)) {
+              state.pendingAbility = null;
+              break;
+            }
+          }
+          const targetArr = state.regions[data.targetRegion]?.[data.targetPlayer];
+          const target =
+            targetArr && targetArr.length > 0
+              ? targetArr[targetArr.length - 1]
+              : null;
+          if (target && target.id === data.targetCardId) {
             target.faceUp = !target.faceUp;
             state.log.push(
               `${getCardById(ability.sourceCard || "N2")?.champion || "Card"}: Flipped ${getCardById(data.targetCardId)?.champion}.`,
@@ -1009,11 +1014,11 @@ function registerSocketHandlers(io, roomManager) {
           break;
         }
         case "N5_opp_flip": {
-          // Opponent is flipping one of their cards
-          const target = state.regions[data.targetRegion]?.[pIdx]?.find(
-            (c) => c.id === data.targetCardId,
-          );
-          if (target) {
+          // Opponent is flipping one of their cards (only the top/uncovered card).
+          const oppArr = state.regions[data.targetRegion]?.[pIdx];
+          const target =
+            oppArr && oppArr.length > 0 ? oppArr[oppArr.length - 1] : null;
+          if (target && target.id === data.targetCardId) {
             target.faceUp = !target.faceUp;
             state.log.push(
               `LeBlanc: Opponent flipped ${getCardById(data.targetCardId)?.champion}.`,
@@ -1038,10 +1043,11 @@ function registerSocketHandlers(io, roomManager) {
           }
         }
         case "N5_self_flip": {
-          const target = state.regions[data.targetRegion]?.[pIdx]?.find(
-            (c) => c.id === data.targetCardId,
-          );
-          if (target) {
+          // Only the top/uncovered card in the stack may be flipped.
+          const selfArr = state.regions[data.targetRegion]?.[pIdx];
+          const target =
+            selfArr && selfArr.length > 0 ? selfArr[selfArr.length - 1] : null;
+          if (target && target.id === data.targetCardId) {
             target.faceUp = !target.faceUp;
             state.log.push(
               `LeBlanc: You flipped ${getCardById(data.targetCardId)?.champion}.`,

@@ -103,7 +103,8 @@
   },
 
   "initiative": {
-    "rule": "loser_of_previous_round_goes_first_next_round"
+    "rule": "alternates_each_round",
+    "note": "Round 1 is random; after that initiative flips every round regardless of who won."
   },
 
   "abilities": {

@@ -1,4 +1,13 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "publicUsers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "leaderboardEligible", "order": "ASCENDING" },
+        { "fieldPath": "stats.elo", "order": "DESCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

@@ -1,4 +1,5 @@
 const { getAdmin, getFirestore } = require("../firebaseAdmin");
+const { sanitizeDisplayName } = require("../utils/sanitize");
 
 const DEFAULT_ELO = 1000;
 const DEFAULT_STATS = Object.freeze({
@@ -99,14 +100,6 @@ function decodeMatchHistoryCursor(cursorStr) {
   }
 }
 
-function sanitizeDisplayName(raw) {
-  if (typeof raw !== "string") return null;
-  let name = raw.trim().replace(/\s+/g, " ");
-  name = name.replace(/[^a-zA-Z0-9 _-]/g, "");
-  if (!name) return null;
-  if (name.length > 16) name = name.slice(0, 16);
-  return name;
-}
 
 function toMillis(value) {
   if (!value) return null;
@@ -602,11 +595,7 @@ async function getLeaderboardPage({ pageSize = 10, cursor = null } = {}) {
 
   const db = getFirestore();
 
-  const out = [];
   let startAfterSnap = null;
-  let nextCursor = null;
-  let hasMore = true;
-
   if (decodedCursor && decodedCursor.uid) {
     const snap = await db
       .collection("publicUsers")
@@ -615,47 +604,39 @@ async function getLeaderboardPage({ pageSize = 10, cursor = null } = {}) {
     if (snap.exists) startAfterSnap = snap;
   }
 
-  // Scan in small batches until we fill a page (skipping ineligible docs).
-  // This avoids requiring composite indexes during early development.
-  const BATCH_LIMIT = 50;
-  let safetyLoops = 0;
+  // orderBy("stats.elo", "desc") works without a composite index.
+  // Once the composite index in firestore.indexes.json is deployed via
+  // `firebase deploy --only firestore:indexes`, you can add:
+  //   .where("leaderboardEligible", "==", true)
+  // before .orderBy(...) to pre-filter on the Firestore side.
+  const FETCH_LIMIT = size + 50;
 
-  while (out.length < size && safetyLoops < 10) {
-    safetyLoops++;
+  let q = db
+    .collection("publicUsers")
+    .orderBy("stats.elo", "desc")
+    .limit(FETCH_LIMIT);
 
-    let q = db
-      .collection("publicUsers")
-      .orderBy("stats.elo", "desc")
-      .limit(BATCH_LIMIT);
+  if (startAfterSnap) q = q.startAfter(startAfterSnap);
 
-    if (startAfterSnap) q = q.startAfter(startAfterSnap);
+  const snap = await q.get();
+  const docs = snap.docs || [];
 
-    const snap = await q.get();
-    if (snap.empty) {
-      hasMore = false;
-      break;
-    }
+  const out = [];
+  let lastIncludedDoc = null;
+  let hasMore = false;
 
-    for (const doc of snap.docs) {
-      const data = doc.data() || {};
+  for (const doc of docs) {
+    const data = doc.data() || {};
+    const stats = normalizeStats(data.stats);
+    const isAnonymous =
+      data.isAnonymous === true || data.provider === "anonymous";
 
-      const stats = normalizeStats(data.stats);
-      const eligible = data.leaderboardEligible !== false;
-      const isAnonymous =
-        data.isAnonymous === true || data.provider === "anonymous";
+    if (isAnonymous || stats.matchTotal < 1) continue;
 
-      // Cursor always advances, even if we skip this entry.
-      startAfterSnap = doc;
-
-      if (!eligible) continue;
-      if (isAnonymous) continue;
-      if (stats.matchTotal < 1) continue;
-
+    if (out.length < size) {
       const displayName =
         asNonEmptyString(data.displayName) || `Player-${doc.id.slice(0, 5)}`;
-
       const winRate = stats.matchTotal > 0 ? stats.wins / stats.matchTotal : 0;
-
       out.push({
         displayName,
         elo: stats.elo,
@@ -663,32 +644,18 @@ async function getLeaderboardPage({ pageSize = 10, cursor = null } = {}) {
         wins: stats.wins,
         winRate,
       });
-
-      if (out.length >= size) break;
-    }
-
-    if (out.length >= size) {
-      const batchLastDoc = snap.docs[snap.docs.length - 1] || null;
-      const stoppedAtBatchEnd =
-        batchLastDoc && startAfterSnap && batchLastDoc.id === startAfterSnap.id;
-
-      // If we filled the page and stopped before the end of this batch,
-      // there are more docs even if the batch is smaller than BATCH_LIMIT.
-      hasMore = !(stoppedAtBatchEnd && snap.size < BATCH_LIMIT);
-      break;
-    }
-
-    // If we didn't fill the page but also didn't get a full batch,
-    // there are no more docs to scan.
-    if (snap.size < BATCH_LIMIT) {
-      hasMore = false;
+      lastIncludedDoc = doc;
+    } else {
+      // Found a valid entry beyond the requested page — more results exist.
+      hasMore = true;
       break;
     }
   }
 
-  if (hasMore && startAfterSnap) {
-    nextCursor = encodeCursor({ uid: startAfterSnap.id });
-  }
+  const nextCursor =
+    hasMore && lastIncludedDoc
+      ? encodeCursor({ uid: lastIncludedDoc.id })
+      : null;
 
   return { items: out, nextCursor };
 }

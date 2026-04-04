@@ -140,6 +140,9 @@ function actingPlayerIndexForTurnTimer(s) {
   return s.currentTurn;
 }
 
+// NOTE: This key format MUST be kept in sync with turnTimerKeyForState
+// in server/socket/handlers.js — both files compute the same key independently
+// (no shared module possible without a build step).
 function turnTimerKeyForState(s) {
   if (!s) return "";
   const actor = actingPlayerIndexForTurnTimer(s);

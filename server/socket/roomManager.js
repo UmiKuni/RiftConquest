@@ -71,7 +71,7 @@ function createRoomManager(io) {
         myIndex: i,
         myHand: room.state.hands[i],
         opponentHandCount: room.state.hands[oppIdx].length,
-        scores: room.state.scores,
+        // scores is already included via ...room.state
         playerDisplayNames,
         mode: room.mode,
         ...(room.mode === "ranked" && Array.isArray(room.playerElos)
