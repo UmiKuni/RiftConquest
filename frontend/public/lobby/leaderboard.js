@@ -76,10 +76,19 @@
       row.className = "leaderboard-row";
       if (rank === 1) row.classList.add("top1");
       else if (rank === 2) row.classList.add("top2");
+      else if (rank === 3) row.classList.add("top3");
 
       const rankEl = document.createElement("div");
       rankEl.className = "leaderboard-rank cinzel";
-      rankEl.textContent = `#${rank}`;
+      if (rank === 1) {
+        rankEl.innerHTML = `<span class="rank-prefix mdi mdi-crown ui-icon" aria-hidden="true" style="font-size:1.25em;"></span>1`;
+      } else if (rank === 2) {
+        rankEl.innerHTML = `<span class="rank-prefix mdi mdi-crown ui-icon" aria-hidden="true" style="font-size:1.15em; opacity:0.9;"></span>2`;
+      } else if (rank === 3) {
+        rankEl.innerHTML = `<span class="rank-prefix mdi mdi-crown ui-icon" aria-hidden="true" style="font-size:1.05em; opacity:0.8;"></span>3`;
+      } else {
+        rankEl.innerHTML = `<span class="rank-prefix text-prefix">#</span>${rank}`;
+      }
 
       const nameEl = document.createElement("div");
       nameEl.className = "leaderboard-name";

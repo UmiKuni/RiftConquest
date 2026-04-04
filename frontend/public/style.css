@@ -843,28 +843,79 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
 }
 
 .leaderboard-row.top1 {
-  border-color: var(--border-glow);
-  background: var(--bg-glass);
+  border: 1px solid rgba(220, 180, 50, 0.6);
+  background: linear-gradient(90deg, rgba(220,180,50,0.15) 0%, rgba(220,180,50,0.05) 100%), var(--bg-glass);
+  box-shadow: 0 0 15px rgba(220, 180, 50, 0.2), inset 0 0 10px rgba(220, 180, 50, 0.1);
+  transform: scale(1.02);
+  margin: 0.2rem 0.2rem 0.4rem 0.2rem;
+  padding: 0.8rem;
 }
-.leaderboard-row.top1 .leaderboard-rank,
+.leaderboard-row.top1 .leaderboard-rank {
+  color: #fce883;
+  text-shadow: 0 0 8px rgba(252, 232, 131, 0.6);
+}
+.leaderboard-row.top1 .leaderboard-name {
+  color: #fce883;
+}
 .leaderboard-row.top1 .leaderboard-elo {
-  color: var(--gold-dim);
+  color: #fce883;
 }
 
 .leaderboard-row.top2 {
-  border-color: var(--gold);
+  border: 1px solid rgba(192, 192, 192, 0.6);
+  background: linear-gradient(90deg, rgba(192,192,192,0.12) 0%, rgba(192,192,192,0.05) 100%), var(--bg-glass);
+  box-shadow: 0 0 10px rgba(192, 192, 192, 0.1);
+  transform: scale(1.01);
+  margin: 0.1rem 0.1rem 0.25rem 0.1rem;
 }
-.leaderboard-row.top2 .leaderboard-rank,
+.leaderboard-row.top2 .leaderboard-rank {
+  color: #e0e0e0;
+  text-shadow: 0 0 5px rgba(224, 224, 224, 0.4);
+}
+.leaderboard-row.top2 .leaderboard-name {
+  color: #f0f0f0;
+}
 .leaderboard-row.top2 .leaderboard-elo {
-  color: var(--gold-light);
+  color: #e0e0e0;
 }
+
+.leaderboard-row.top3 {
+  border: 1px solid rgba(205, 127, 50, 0.5);
+  background: linear-gradient(90deg, rgba(205,127,50,0.1) 0%, rgba(205,127,50,0.02) 100%), rgba(0, 0, 0, 0.18);
+}
+.leaderboard-row.top3 .leaderboard-rank {
+  color: #e8a05c;
+}
+.leaderboard-row.top3 .leaderboard-elo {
+  color: #e8a05c;
+}
+
 .leaderboard-rank {
-  width: 2.6rem;
+  width: 2.8rem;
   flex-shrink: 0;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  white-space: nowrap;
   font-weight: 900;
   letter-spacing: 0.08em;
   color: var(--gold-light);
+  position: relative;
+}
+
+.rank-prefix {
+  position: absolute;
+  left: 0.15rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.4rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.rank-prefix.text-prefix {
+  font-size: 0.8em;
+  opacity: 0.5;
 }
 .leaderboard-name {
   flex: 1;
