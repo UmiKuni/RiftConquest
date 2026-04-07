@@ -844,8 +844,16 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
 
 .leaderboard-row.top1 {
   border: 1px solid rgba(220, 180, 50, 0.6);
-  background: linear-gradient(90deg, rgba(220,180,50,0.15) 0%, rgba(220,180,50,0.05) 100%), var(--bg-glass);
-  box-shadow: 0 0 15px rgba(220, 180, 50, 0.2), inset 0 0 10px rgba(220, 180, 50, 0.1);
+  background:
+    linear-gradient(
+      90deg,
+      rgba(220, 180, 50, 0.15) 0%,
+      rgba(220, 180, 50, 0.05) 100%
+    ),
+    var(--bg-glass);
+  box-shadow:
+    0 0 15px rgba(220, 180, 50, 0.2),
+    inset 0 0 10px rgba(220, 180, 50, 0.1);
   transform: scale(1.02);
   margin: 0.2rem 0.2rem 0.4rem 0.2rem;
   padding: 0.8rem;
@@ -863,7 +871,13 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
 
 .leaderboard-row.top2 {
   border: 1px solid rgba(192, 192, 192, 0.6);
-  background: linear-gradient(90deg, rgba(192,192,192,0.12) 0%, rgba(192,192,192,0.05) 100%), var(--bg-glass);
+  background:
+    linear-gradient(
+      90deg,
+      rgba(192, 192, 192, 0.12) 0%,
+      rgba(192, 192, 192, 0.05) 100%
+    ),
+    var(--bg-glass);
   box-shadow: 0 0 10px rgba(192, 192, 192, 0.1);
   transform: scale(1.01);
   margin: 0.1rem 0.1rem 0.25rem 0.1rem;
@@ -881,7 +895,13 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
 
 .leaderboard-row.top3 {
   border: 1px solid rgba(205, 127, 50, 0.5);
-  background: linear-gradient(90deg, rgba(205,127,50,0.1) 0%, rgba(205,127,50,0.02) 100%), rgba(0, 0, 0, 0.18);
+  background:
+    linear-gradient(
+      90deg,
+      rgba(205, 127, 50, 0.1) 0%,
+      rgba(205, 127, 50, 0.02) 100%
+    ),
+    rgba(0, 0, 0, 0.18);
 }
 .leaderboard-row.top3 .leaderboard-rank {
   color: #e8a05c;
@@ -2383,7 +2403,7 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   border: 1px solid var(--border-glow);
   border-radius: var(--radius-lg);
   padding: 2rem;
-  width: min(440px, 94vw);
+  width: min(560px, 94vw);
   box-shadow: var(--shadow-glow-gold), var(--shadow-card);
 }
 .modal-title {
@@ -2402,8 +2422,116 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-height: 300px;
+  max-height: 380px;
+  overflow-x: auto;
   overflow-y: auto;
+}
+
+.ability-region-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  min-width: 500px;
+  margin-bottom: 0.25rem;
+}
+
+.ability-region-column {
+  border: 1px solid rgba(200, 155, 60, 0.22);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.45rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.ability-region-column.focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(200, 155, 60, 0.2) inset;
+}
+
+.ability-region-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ability-region-title {
+  font-family: "Cinzel", serif;
+  font-size: 0.67rem;
+  letter-spacing: 0.1em;
+  color: var(--gold-light);
+}
+
+.ability-region-points {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+
+.ability-region-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-height: 96px;
+  max-height: 210px;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+
+.ability-region-card-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(200, 155, 60, 0.22);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--text-primary);
+  padding: 0.4rem 0.45rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.ability-region-card-row:hover {
+  border-color: var(--gold);
+  background: rgba(200, 155, 60, 0.08);
+}
+
+.ability-region-card-row:active {
+  transform: translateY(1px);
+}
+
+.ability-region-card-row.destination {
+  align-items: center;
+}
+
+.ability-row-name {
+  font-family: "Cinzel", serif;
+  font-size: 0.76rem;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+}
+
+.ability-row-meta {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.ability-region-card-empty {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  border: 1px dashed rgba(200, 155, 60, 0.2);
+  border-radius: 6px;
+  padding: 0.35rem 0.4rem;
+  text-align: center;
 }
 .modal-option {
   display: flex;

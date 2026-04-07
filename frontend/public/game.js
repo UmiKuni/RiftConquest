@@ -1053,6 +1053,213 @@ function renderLog(log) {
   container.scrollTop = container.scrollHeight;
 }
 
+function getAbilityRegionScore(state, region) {
+  return {
+    my: calcStrengthClient(state, region, myIndex),
+    opp: calcStrengthClient(state, region, 1 - myIndex),
+  };
+}
+
+function buildAbilityMovePreview(
+  state,
+  fromRegion,
+  fromIndex,
+  toRegion,
+  cardId,
+) {
+  const preview = JSON.parse(JSON.stringify(state));
+  const fromArr = preview.regions[fromRegion]?.[myIndex];
+  const toArr = preview.regions[toRegion]?.[myIndex];
+  if (!Array.isArray(fromArr) || !Array.isArray(toArr)) return preview;
+
+  let idx = -1;
+  if (
+    Number.isInteger(fromIndex) &&
+    fromIndex >= 0 &&
+    fromIndex < fromArr.length
+  ) {
+    idx = fromIndex;
+  } else {
+    idx = fromArr.findIndex((c) => c.id === cardId);
+  }
+  if (idx === -1) return preview;
+
+  const [moved] = fromArr.splice(idx, 1);
+  toArr.push(moved);
+  return preview;
+}
+
+function makeAbilityRegionCardPicker(state, cfg = {}) {
+  const root = document.createElement("div");
+  root.className = "ability-region-picker-grid";
+
+  const filterFn =
+    typeof cfg.filterFn === "function" ? cfg.filterFn : () => true;
+  const onPick = typeof cfg.onPick === "function" ? cfg.onPick : null;
+  const emptyText = cfg.emptyText || "No valid cards";
+  const selected = cfg.selected || null;
+
+  for (const region of getRegionOrder(state)) {
+    const tile = document.createElement("div");
+    tile.className =
+      "ability-region-column" +
+      (selected && selected.region === region ? " focus" : "");
+
+    const header = document.createElement("div");
+    header.className = "ability-region-header";
+
+    const title = document.createElement("div");
+    title.className = "ability-region-title";
+    title.textContent = region;
+
+    const score = getAbilityRegionScore(state, region);
+    const points = document.createElement("div");
+    points.className = "ability-region-points";
+    points.textContent = `You ${score.my} : Opp ${score.opp}`;
+
+    header.appendChild(title);
+    header.appendChild(points);
+
+    const list = document.createElement("div");
+    list.className = "ability-region-card-list";
+
+    const myCards = state.regions[region][myIndex] || [];
+    let shown = 0;
+
+    for (let idx = myCards.length - 1; idx >= 0; idx--) {
+      const c = myCards[idx];
+      if (!filterFn(c, idx, myCards, region)) continue;
+
+      shown++;
+      const def = getCardDef(c.id);
+      const coverCount = myCards.length - 1 - idx;
+      const coverLabel = coverCount === 0 ? "top" : `covered x${coverCount}`;
+
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "ability-region-card-row";
+
+      const name = document.createElement("span");
+      name.className = "ability-row-name";
+      name.textContent = def.champion;
+
+      const meta = document.createElement("span");
+      meta.className = "ability-row-meta";
+      meta.textContent = c.faceUp
+        ? `face-up STR ${def.strength} · ${coverLabel}`
+        : `facedown · ${coverLabel}`;
+
+      row.appendChild(name);
+      row.appendChild(meta);
+
+      if (onPick) {
+        row.addEventListener("click", () => {
+          onPick({
+            card: c,
+            cardDef: def,
+            region,
+            index: idx,
+          });
+        });
+      }
+
+      list.appendChild(row);
+    }
+
+    if (shown === 0) {
+      const empty = document.createElement("div");
+      empty.className = "ability-region-card-empty";
+      empty.textContent = emptyText;
+      list.appendChild(empty);
+    }
+
+    tile.appendChild(header);
+    tile.appendChild(list);
+    root.appendChild(tile);
+  }
+
+  return root;
+}
+
+function makeAbilityMoveDestinationPicker(state, cfg = {}) {
+  const root = document.createElement("div");
+  root.className = "ability-region-picker-grid";
+
+  const fromRegion = cfg.fromRegion;
+  const fromIndex = cfg.fromIndex;
+  const cardId = cfg.cardId;
+  const onPick = typeof cfg.onPick === "function" ? cfg.onPick : null;
+
+  for (const region of getRegionOrder(state)) {
+    const tile = document.createElement("div");
+    tile.className =
+      "ability-region-column" + (region === fromRegion ? " focus" : "");
+
+    const header = document.createElement("div");
+    header.className = "ability-region-header";
+
+    const title = document.createElement("div");
+    title.className = "ability-region-title";
+    title.textContent = region;
+
+    const before = getAbilityRegionScore(state, region);
+    const points = document.createElement("div");
+    points.className = "ability-region-points";
+    points.textContent = `Now ${before.my} : Opp ${before.opp}`;
+
+    header.appendChild(title);
+    header.appendChild(points);
+
+    const list = document.createElement("div");
+    list.className = "ability-region-card-list";
+
+    if (region === fromRegion) {
+      const note = document.createElement("div");
+      note.className = "ability-region-card-empty";
+      note.textContent = "Current region";
+      list.appendChild(note);
+    } else {
+      const preview = buildAbilityMovePreview(
+        state,
+        fromRegion,
+        fromIndex,
+        region,
+        cardId,
+      );
+      const after = getAbilityRegionScore(preview, region);
+      const delta = after.my - before.my;
+      const deltaLabel = delta >= 0 ? `+${delta}` : String(delta);
+
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "ability-region-card-row destination";
+
+      const name = document.createElement("span");
+      name.className = "ability-row-name";
+      name.textContent = "Move here";
+
+      const meta = document.createElement("span");
+      meta.className = "ability-row-meta";
+      meta.textContent = `After ${after.my} : Opp ${after.opp} (You ${deltaLabel})`;
+
+      row.appendChild(name);
+      row.appendChild(meta);
+
+      if (onPick) {
+        row.addEventListener("click", () => onPick(region));
+      }
+
+      list.appendChild(row);
+    }
+
+    tile.appendChild(header);
+    tile.appendChild(list);
+    root.appendChild(tile);
+  }
+
+  return root;
+}
+
 // ─── Ability Modal ─────────────────────────────────────────────────────────
 function openAbilityModal(ability, customLabel) {
   const modal = document.getElementById("abilityModal");
@@ -1122,44 +1329,39 @@ function openAbilityModal(ability, customLabel) {
       let step = "pick";
       let pickedCard = null;
       let pickedFrom = null;
-      const order = getRegionOrder(gameState);
-      for (const r of order) {
-        const myCardsInR = gameState.regions[r][myIndex] || [];
-        for (const c of myCardsInR) {
-          const def = getCardDef(c.id);
-          const el = mkModalOption(
-            c.id,
-            def.champion,
-            r + (c.faceUp ? " · STR " + def.strength : " · facedown"),
-          );
-          el.addEventListener("click", () => {
+      let pickedFromIndex = null;
+
+      opts.appendChild(
+        makeAbilityRegionCardPicker(gameState, {
+          emptyText: "No cards",
+          onPick: ({ card, cardDef, region, index }) => {
             if (step !== "pick") return;
-            pickedCard = c.id;
-            pickedFrom = r;
+            pickedCard = card.id;
+            pickedFrom = region;
+            pickedFromIndex = index;
             step = "dest";
+
             opts.innerHTML = "";
-            desc.textContent = `Move ${def.champion} to which region?`;
-            for (const dr of order) {
-              if (dr === r) continue;
-              const d = mkModalOption(
-                dr,
-                `<span class="mdi mdi-map-marker ui-icon" aria-hidden="true"></span>&nbsp;${dr}`,
-                "Move here",
-              );
-              d.addEventListener("click", () => {
-                socket.emit("abilityResponse", {
-                  cardId: pickedCard,
-                  fromRegion: pickedFrom,
-                  toRegion: dr,
-                });
-                closeModal();
-              });
-              opts.appendChild(d);
-            }
-          });
-          opts.appendChild(el);
-        }
-      }
+            desc.textContent = `Move ${cardDef.champion} to which region?`;
+            opts.appendChild(
+              makeAbilityMoveDestinationPicker(gameState, {
+                fromRegion: pickedFrom,
+                fromIndex: pickedFromIndex,
+                cardId: pickedCard,
+                onPick: (toRegion) => {
+                  socket.emit("abilityResponse", {
+                    cardId: pickedCard,
+                    fromRegion: pickedFrom,
+                    toRegion,
+                  });
+                  closeModal();
+                },
+              }),
+            );
+          },
+        }),
+      );
+
       footer.appendChild(
         mkBtn("Skip", "btn btn-secondary btn-sm", () => {
           socket.emit("abilityResponse", { skip: true });
@@ -1170,40 +1372,28 @@ function openAbilityModal(ability, customLabel) {
     }
     case "I4_return": {
       desc.textContent =
-        "Return any facedown card to hand and gain an extra turn, or skip.";
-      let anyFound = false;
-      const order = getRegionOrder(gameState);
-      for (const r of order) {
-        const myCardsInR = gameState.regions[r][myIndex] || [];
-        if (myCardsInR.length > 0) {
-          // Include covered facedown cards as valid Yasuo targets.
-          for (let idx = myCardsInR.length - 1; idx >= 0; idx--) {
-            const c = myCardsInR[idx];
-            if (c.faceUp) continue;
+        "Choose a facedown card (covered or uncovered) to return and gain an extra turn.";
 
-            anyFound = true;
-            const def = getCardDef(c.id);
-            const coverCount = myCardsInR.length - 1 - idx;
-            const coverLabel =
-              coverCount === 0 ? "uncovered" : `covered x${coverCount}`;
-            const el = mkModalOption(
-              `${c.id}-${r}-${idx}`,
-              def.champion,
-              `${r} — ${coverLabel} — return for extra turn`,
-            );
-            el.addEventListener("click", () => {
-              socket.emit("abilityResponse", {
-                cardId: c.id,
-                fromRegion: r,
-                fromIndex: idx,
-              });
-              closeModal();
+      const hasAny = getRegionOrder(gameState).some((r) =>
+        (gameState.regions[r][myIndex] || []).some((c) => !c.faceUp),
+      );
+      if (!hasAny) desc.textContent = "No facedown cards to return.";
+
+      opts.appendChild(
+        makeAbilityRegionCardPicker(gameState, {
+          filterFn: (c) => !c.faceUp,
+          emptyText: "No facedown cards",
+          onPick: ({ card, region, index }) => {
+            socket.emit("abilityResponse", {
+              cardId: card.id,
+              fromRegion: region,
+              fromIndex: index,
             });
-            opts.appendChild(el);
-          }
-        }
-      }
-      if (!anyFound) desc.textContent = "No facedown cards to return.";
+            closeModal();
+          },
+        }),
+      );
+
       footer.appendChild(
         mkBtn("Skip", "btn btn-secondary btn-sm", () => {
           socket.emit("abilityResponse", { skip: true });
