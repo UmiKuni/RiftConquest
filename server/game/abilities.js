@@ -127,7 +127,7 @@ function applyInstantAbility(state, cardId, playerIdx, playedRegion) {
       // Yasuo — return a facedown card to hand, gain extra turn
       const hasFacedown = REGIONS.some((r) => {
         const pCards = state.regions[r][playerIdx];
-        return pCards.length > 0 && !pCards[pCards.length - 1].faceUp;
+        return pCards.some((c) => !c.faceUp);
       });
       if (hasFacedown) {
         return {
@@ -140,7 +140,7 @@ function applyInstantAbility(state, cardId, playerIdx, playedRegion) {
           },
         };
       }
-      state.log.push(`Yasuo: No uncovered facedown cards to return.`);
+      state.log.push(`Yasuo: No facedown cards to return.`);
       break;
     }
   }

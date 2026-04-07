@@ -1170,31 +1170,40 @@ function openAbilityModal(ability, customLabel) {
     }
     case "I4_return": {
       desc.textContent =
-        "Return an uncovered facedown card to hand and gain an extra turn, or skip.";
+        "Return any facedown card to hand and gain an extra turn, or skip.";
       let anyFound = false;
       const order = getRegionOrder(gameState);
       for (const r of order) {
         const myCardsInR = gameState.regions[r][myIndex] || [];
         if (myCardsInR.length > 0) {
-          const c = myCardsInR[myCardsInR.length - 1]; // Only the uncovered card
-          if (!c.faceUp) {
+          // Include covered facedown cards as valid Yasuo targets.
+          for (let idx = myCardsInR.length - 1; idx >= 0; idx--) {
+            const c = myCardsInR[idx];
+            if (c.faceUp) continue;
+
             anyFound = true;
             const def = getCardDef(c.id);
+            const coverCount = myCardsInR.length - 1 - idx;
+            const coverLabel =
+              coverCount === 0 ? "uncovered" : `covered x${coverCount}`;
             const el = mkModalOption(
-              c.id,
+              `${c.id}-${r}-${idx}`,
               def.champion,
-              r + " — return for extra turn",
+              `${r} — ${coverLabel} — return for extra turn`,
             );
             el.addEventListener("click", () => {
-              socket.emit("abilityResponse", { cardId: c.id, fromRegion: r });
+              socket.emit("abilityResponse", {
+                cardId: c.id,
+                fromRegion: r,
+                fromIndex: idx,
+              });
               closeModal();
             });
             opts.appendChild(el);
           }
         }
       }
-      if (!anyFound)
-        desc.textContent = "No facedown uncovered cards to return.";
+      if (!anyFound) desc.textContent = "No facedown cards to return.";
       footer.appendChild(
         mkBtn("Skip", "btn btn-secondary btn-sm", () => {
           socket.emit("abilityResponse", { skip: true });

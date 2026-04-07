@@ -992,7 +992,8 @@ function registerSocketHandlers(io, roomManager) {
               break;
             }
           }
-          const targetArr = state.regions[data.targetRegion]?.[data.targetPlayer];
+          const targetArr =
+            state.regions[data.targetRegion]?.[data.targetPlayer];
           const target =
             targetArr && targetArr.length > 0
               ? targetArr[targetArr.length - 1]
@@ -1089,13 +1090,37 @@ function registerSocketHandlers(io, roomManager) {
           break;
         }
         case "I4_return": {
-          // data: { cardId, fromRegion } or { skip: true }
+          // data: { cardId, fromRegion, fromIndex? } or { skip: true }
           if (!data.skip && data.cardId && data.fromRegion) {
             const fromArr = state.regions[data.fromRegion]?.[pIdx];
             if (fromArr) {
-              const cIdx = fromArr.findIndex(
-                (c) => c.id === data.cardId && !c.faceUp,
-              );
+              let cIdx = -1;
+
+              const fromIndexRaw = data.fromIndex;
+              const fromIndex =
+                typeof fromIndexRaw === "number"
+                  ? fromIndexRaw
+                  : parseInt(String(fromIndexRaw ?? ""), 10);
+
+              // Prefer exact stack index when supplied (needed for covered cards).
+              if (
+                Number.isInteger(fromIndex) &&
+                fromIndex >= 0 &&
+                fromIndex < fromArr.length
+              ) {
+                const atIndex = fromArr[fromIndex];
+                if (atIndex && !atIndex.faceUp && atIndex.id === data.cardId) {
+                  cIdx = fromIndex;
+                }
+              }
+
+              // Backward-compatible fallback for older clients.
+              if (cIdx === -1) {
+                cIdx = fromArr.findIndex(
+                  (c) => c.id === data.cardId && !c.faceUp,
+                );
+              }
+
               if (cIdx !== -1) {
                 const [returned] = fromArr.splice(cIdx, 1);
                 state.hands[pIdx].push(getCardById(returned.id));
