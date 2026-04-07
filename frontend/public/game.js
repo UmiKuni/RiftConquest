@@ -114,10 +114,10 @@ function syncRoundIntroOverlayFromState(s) {
   roundIntroUi.timers.push(t1);
 }
 
-// ─── Turn Timer UI (40s circular indicator) ───────────────────────────────
-// Server enforces a turn timer (default 40s). Client UI approximates the
+// ─── Turn Timer UI (60s circular indicator) ───────────────────────────────
+// Server enforces a turn timer (default 60s). Client UI approximates the
 // countdown and restarts when the same state transitions occur.
-const TURN_TIMEOUT_MS = 40000;
+const TURN_TIMEOUT_MS = 60000;
 const TURN_TIMER_TICK_MS = 100;
 
 const turnTimerUi = {
@@ -497,7 +497,7 @@ function render() {
     hintEl.textContent = `(Opponent scores +${vpOppScores} VP)`;
   }
 
-  // Turn timer ring (40s) in the header.
+  // Turn timer ring (60s) in the header.
   syncTurnTimerFromState(s);
 
   // Status bar

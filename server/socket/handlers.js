@@ -198,7 +198,7 @@ function registerSocketHandlers(io, roomManager) {
   const LOBBY_DISCONNECT_GRACE_MS = 10000;
   const TURN_TIMEOUT_MS = readDurationMs(
     process.env.TURN_TIMEOUT_MS,
-    40000,
+    60000,
     5000,
     5 * 60 * 1000,
   );
