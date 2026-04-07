@@ -1,14 +1,36 @@
 function createRoomManager(io) {
   const rooms = {};
 
+  function perspectiveLogText(text, viewerIdx) {
+    if (typeof text !== "string") return text;
+
+    const matches = [...text.matchAll(/\b[Pp]layer\s+([0-2])\b/g)];
+    if (!matches.length) return text;
+
+    const seen = matches.map((m) => Number(m[1]));
+    const zeroBased = seen.includes(0);
+    const base = zeroBased ? 0 : 1;
+
+    return text.replace(/\b[Pp]layer\s+([0-2])\b/g, (full, numText) => {
+      const idx = Number(numText) - base;
+      if (idx !== 0 && idx !== 1) return full;
+      return idx === viewerIdx ? "You" : "Opp";
+    });
+  }
+
   function logEntryForPlayer(entry, playerIdx) {
-    if (typeof entry === "string") return entry;
+    if (typeof entry === "string") {
+      return perspectiveLogText(entry, playerIdx);
+    }
     if (!entry || typeof entry !== "object") return null;
 
     if (typeof entry.m0 === "string" && typeof entry.m1 === "string") {
-      return playerIdx === 0 ? entry.m0 : entry.m1;
+      const msg = playerIdx === 0 ? entry.m0 : entry.m1;
+      return perspectiveLogText(msg, playerIdx);
     }
-    if (typeof entry.text === "string") return entry.text;
+    if (typeof entry.text === "string") {
+      return perspectiveLogText(entry.text, playerIdx);
+    }
     return null;
   }
 
