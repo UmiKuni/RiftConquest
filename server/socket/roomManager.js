@@ -5,17 +5,21 @@ function createRoomManager(io) {
     if (typeof text !== "string") return text;
 
     const matches = [...text.matchAll(/\b[Pp]layer\s+([0-2])\b/g)];
-    if (!matches.length) return text;
+    const withPerspective = matches.length
+      ? (() => {
+          const seen = matches.map((m) => Number(m[1]));
+          const zeroBased = seen.includes(0);
+          const base = zeroBased ? 0 : 1;
 
-    const seen = matches.map((m) => Number(m[1]));
-    const zeroBased = seen.includes(0);
-    const base = zeroBased ? 0 : 1;
+          return text.replace(/\b[Pp]layer\s+([0-2])\b/g, (full, numText) => {
+            const idx = Number(numText) - base;
+            if (idx !== 0 && idx !== 1) return full;
+            return idx === viewerIdx ? "You" : "Opp";
+          });
+        })()
+      : text;
 
-    return text.replace(/\b[Pp]layer\s+([0-2])\b/g, (full, numText) => {
-      const idx = Number(numText) - base;
-      if (idx !== 0 && idx !== 1) return full;
-      return idx === viewerIdx ? "You" : "Opp";
-    });
+    return withPerspective.replace(/\bopponent\b/gi, "Opp");
   }
 
   function logEntryForPlayer(entry, playerIdx) {
