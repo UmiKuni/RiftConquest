@@ -97,7 +97,7 @@ function startNewRound(state, opts = {}) {
     done: [false, false],
   };
   state.log.push(
-    `--- Round ${state.round} begins. Player ${state.initiative + 1} has initiative ---`,
+    `--- ROUND ${state.round} START ---`,
   );
   return state;
 }

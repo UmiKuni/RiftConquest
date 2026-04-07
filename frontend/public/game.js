@@ -760,7 +760,7 @@ function buildBoardCard(c, playerIdx, region, s, isUncovered) {
         </div>
         <span class="card-str"><span class="mdi mdi-sword-cross ui-icon" aria-hidden="true"></span> ${def.strength}</span>
       </div>
-      <img src="/image/${c.id}${getImgExt(c.id)}" alt="${def.champion}"
+      <img src="${getCardImagePath(c.id)}" alt="${def.champion}"
            onerror="this.style.display='none'" />
       <img src="/image/Icon_${def.region}.webp" class="card-region-corner" alt="${def.region}" onerror="this.style.display='none'">
     `;
@@ -876,7 +876,7 @@ function renderHand(hand) {
     el.setAttribute("data-id", card.id);
 
     el.innerHTML = `
-      <img src="/image/${card.id}${getImgExt(card.id)}" alt="${card.champion}"
+      <img src="${getCardImagePath(card.id)}" alt="${card.champion}"
            onerror="this.onerror=null;this.style.minHeight='52px';this.style.display='block';this.style.background='#1a2035'" />
       <div class="card-info">
         <span class="c-str">${card.strength}</span>
@@ -986,8 +986,7 @@ function showCardInfo(def) {
   document.getElementById("cardInfoIdle").classList.add("hidden");
   document.getElementById("cardInfoDetail").classList.remove("hidden");
 
-  document.getElementById("cidImage").src =
-    `/image/${def.id}${getImgExt(def.id)}`;
+  document.getElementById("cidImage").src = getCardImagePath(def.id);
   document.getElementById("cidImage").alt = def.champion;
   setElIconText(
     document.getElementById("cidStrength"),
@@ -1662,28 +1661,8 @@ function getCardDef(id) {
   );
 }
 
-const IMG_EXT = {
-  N1: "jpg",
-  N2: "jpg",
-  N3: "png",
-  N4: "png",
-  N5: "png",
-  N6: "jpg",
-  D1: "jpg",
-  D2: "png",
-  D3: "jpg",
-  D4: "png",
-  D5: "jpg",
-  D6: "png",
-  I1: "png",
-  I2: "jpg",
-  I3: "jpg",
-  I4: "jpg",
-  I5: "png",
-  I6: "png",
-};
-function getImgExt(id) {
-  return "." + (IMG_EXT[id] || "png");
+function getCardImagePath(cardId) {
+  return `/image/${cardId}.jpg`;
 }
 
 function adjacentRegions(r) {
