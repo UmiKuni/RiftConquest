@@ -5,7 +5,8 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "nodemon server/index.js"
+    "dev": "nodemon server/index.js",
+    "reset:ranked": "node scripts/reset-ranked-data.js"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
