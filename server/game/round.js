@@ -75,26 +75,27 @@ function endRound(state, code, room) {
 
     for (const r of REGIONS) {
       if (regionResults[r] === 0) p1Reg++;
-      else p2Reg++;
+      else if (regionResults[r] === 1) p2Reg++;
     }
 
     if (p1Reg > p2Reg) {
       roundWinner = 0;
       vpScored = 6;
       reason = "Controlled more Regions";
+      state.log.push(`Player 1 controls more regions and gains 6 VP!`);
     } else if (p2Reg > p1Reg) {
       roundWinner = 1;
       vpScored = 6;
       reason = "Controlled more Regions";
+      state.log.push(`Player 2 controls more regions and gains 6 VP!`);
     } else {
       roundWinner = state.initiative;
       vpScored = 6;
       reason = "Tie breaker (Initiative)";
+      state.log.push(
+        `Region control tied (${p1Reg}-${p2Reg}). Player ${roundWinner + 1} wins by initiative and gains 6 VP!`,
+      );
     }
-
-    state.log.push(
-      `Player ${roundWinner + 1} controls more regions and gains 6 VP!`,
-    );
   }
 
   state.scores[roundWinner] += vpScored;
