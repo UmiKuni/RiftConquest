@@ -2600,10 +2600,21 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-glow-gold), var(--shadow-card);
 }
+
+.win-title-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-bottom: 0.45rem;
+}
+
 .win-box .trophy {
-  font-size: 5rem;
-  display: block;
-  margin-bottom: 1rem;
+  font-size: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
   animation: trophyPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes trophyPop {
@@ -2617,22 +2628,67 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   }
 }
 .win-box h2 {
-  font-family: "Cinzel", serif;
-  font-size: 2rem;
-  font-weight: 900;
-  background: linear-gradient(135deg, #f0d080, #c89b3c);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 0.5rem;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  background: none;
+  -webkit-text-fill-color: currentColor;
 }
 .win-box p {
+  color: #f0d080;
+  font-family: "Cinzel", serif;
+  font-size: 1.55rem;
+  font-weight: 800;
+  margin-bottom: 0.55rem;
+}
+
+.win-reason-row {
+  width: min(620px, 86vw);
+  margin: 0 auto 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.win-reason-text {
   color: var(--text-secondary);
-  margin-bottom: 2rem;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.win-point-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(200, 155, 60, 0.45);
+  background: rgba(200, 155, 60, 0.08);
+  white-space: nowrap;
+}
+
+.win-point-score {
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.win-ranked-rp-row {
+  width: min(620px, 86vw);
+  margin: 0 auto 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
 }
 
 .win-summary {
-  margin: 0 auto 1.35rem;
+  margin: 0.45rem auto 1.35rem;
   width: min(620px, 86vw);
   display: grid;
   gap: 0.55rem;
@@ -2666,9 +2722,56 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   justify-content: center;
 }
 
+.win-summary-row-score.with-rp {
+  justify-content: center;
+  gap: 1.15rem;
+}
+
 .win-vp-score {
   font-size: 1.15rem;
   letter-spacing: 0.01em;
+}
+
+.win-rp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.26rem 0.62rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(200, 155, 60, 0.45);
+  background: rgba(200, 155, 60, 0.08);
+}
+
+.win-rp-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.win-rp-meta-label {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.win-rp-icon {
+  color: #f0d080;
+  font-size: 1.05rem;
+}
+
+.win-rp-final {
+  font-size: 1.16rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.win-rp-delta {
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-secondary);
 }
 
 .win-vp-my {
@@ -2851,5 +2954,21 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
 @media (max-width: 560px) {
   .game-right {
     display: none;
+  }
+
+  .win-reason-row {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .win-reason-text {
+    width: 100%;
+    text-align: center;
+  }
+
+  .win-ranked-rp-row {
+    justify-content: center;
+    gap: 0.4rem;
   }
 }

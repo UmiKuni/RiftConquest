@@ -344,13 +344,22 @@
     <!-- ── Win Screen ── -->
     <div class="win-overlay hidden" id="winOverlay">
       <div class="win-box">
-        <span
-          class="trophy mdi mdi-trophy ui-icon"
-          id="winTrophy"
-          aria-hidden="true"
-        ></span>
-        <h2 id="winTitle">Victory!</h2>
-        <p id="winDesc">You conquered the Rift!</p>
+        <div class="win-title-row">
+          <h2 id="winTitle">Match Result</h2>
+          <span
+            class="trophy mdi mdi-trophy ui-icon"
+            id="winTrophy"
+            aria-hidden="true"
+          ></span>
+        </div>
+        <p id="winDesc">Victory!</p>
+        <div class="win-reason-row">
+          <span class="win-reason-text" id="winReason"
+            >By points advantage.</span
+          >
+          <span class="win-point-pill" id="winPointPill"></span>
+        </div>
+        <div class="win-ranked-rp-row hidden" id="winRankedRpRow"></div>
         <div class="win-summary" id="winSummary"></div>
         <button class="btn btn-primary" onclick="location.href = '/'">
           <span class="mdi mdi-sword-cross ui-icon" aria-hidden="true"></span>

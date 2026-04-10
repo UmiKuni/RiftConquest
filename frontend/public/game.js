@@ -1476,9 +1476,88 @@ function regionWinnerLabelForViewer(myStr, oppStr, initiative) {
   return initiative === myIndex ? "You (Initiative)" : "Opp (Initiative)";
 }
 
-function renderWinSummary(iWon) {
-  const box = document.getElementById("winSummary");
-  if (!box || !gameState || myIndex === null || myIndex === undefined) return;
+let winRpAnimFrame = null;
+let winRpAnimKey = "";
+
+function resolveRankedRpResult(s) {
+  if (!s || s.mode !== "ranked") return null;
+
+  if (
+    Array.isArray(s.rankedResult) &&
+    s.rankedResult[myIndex] &&
+    Number.isFinite(s.rankedResult[myIndex].eloBefore) &&
+    Number.isFinite(s.rankedResult[myIndex].eloAfter)
+  ) {
+    const before = Math.round(s.rankedResult[myIndex].eloBefore);
+    const after = Math.round(s.rankedResult[myIndex].eloAfter);
+    const delta = Number.isFinite(s.rankedResult[myIndex].delta)
+      ? Math.round(s.rankedResult[myIndex].delta)
+      : after - before;
+    return { before, after, delta, ready: true };
+  }
+
+  if (
+    Array.isArray(initialRankedElos) &&
+    Number.isFinite(initialRankedElos[myIndex]) &&
+    Array.isArray(s.playerElos) &&
+    Number.isFinite(s.playerElos[myIndex]) &&
+    Math.round(s.playerElos[myIndex]) !== initialRankedElos[myIndex]
+  ) {
+    const before = initialRankedElos[myIndex];
+    const after = Math.round(s.playerElos[myIndex]);
+    return { before, after, delta: after - before, ready: true };
+  }
+
+  if (Array.isArray(s.playerElos) && Number.isFinite(s.playerElos[myIndex])) {
+    const now = Math.round(s.playerElos[myIndex]);
+    return { before: now, after: now, delta: 0, ready: false };
+  }
+
+  return { before: null, after: null, delta: null, ready: false };
+}
+
+function animateWinRpValue(el, from, to, key) {
+  if (!el) return;
+
+  if (winRpAnimFrame) {
+    cancelAnimationFrame(winRpAnimFrame);
+    winRpAnimFrame = null;
+  }
+
+  if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) {
+    el.textContent = Number.isFinite(to) ? `${Math.round(to)}` : "--";
+    winRpAnimKey = key;
+    return;
+  }
+
+  if (winRpAnimKey === key) {
+    el.textContent = `${Math.round(to)}`;
+    return;
+  }
+
+  winRpAnimKey = key;
+  const start = performance.now();
+  const durationMs = 900;
+
+  const tick = (now) => {
+    const t = Math.min(1, (now - start) / durationMs);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const value = Math.round(from + (to - from) * eased);
+    el.textContent = `${value}`;
+    if (t < 1) {
+      winRpAnimFrame = requestAnimationFrame(tick);
+    } else {
+      winRpAnimFrame = null;
+      el.textContent = `${Math.round(to)}`;
+    }
+  };
+
+  winRpAnimFrame = requestAnimationFrame(tick);
+}
+
+function renderWinPointPill() {
+  const pill = document.getElementById("winPointPill");
+  if (!pill || !gameState || myIndex === null || myIndex === undefined) return;
 
   const s = gameState;
   const myVp = Number.isFinite(s.scores[myIndex]) ? s.scores[myIndex] : 0;
@@ -1486,12 +1565,70 @@ function renderWinSummary(iWon) {
     ? s.scores[1 - myIndex]
     : 0;
 
-  box.textContent = "";
+  pill.innerHTML = `
+    <span class="win-point-score"><span class="win-vp-my">${myVp}</span> : <span class="win-vp-opp">${oppVp}</span></span>
+  `;
+}
 
-  const vpRow = document.createElement("div");
-  vpRow.className = "win-summary-row win-summary-row-score";
-  vpRow.innerHTML = `<span class="v win-vp-score"><span class="win-vp-my">${myVp}</span> : <span class="win-vp-opp">${oppVp}</span></span>`;
-  box.appendChild(vpRow);
+function renderRankedRpRow() {
+  const row = document.getElementById("winRankedRpRow");
+  if (!row || !gameState || myIndex === null || myIndex === undefined) return;
+
+  const s = gameState;
+  if (s.mode !== "ranked") {
+    row.textContent = "";
+    row.classList.add("hidden");
+    return;
+  }
+
+  const rankedRp = resolveRankedRpResult(s);
+  row.classList.remove("hidden");
+  row.innerHTML = `
+    <span class="win-rp-badge">
+      <span class="win-rp-meta">
+        <span class="win-rp-final">--</span>
+      </span>
+      <span class="win-rp-meta">
+        <span class="win-rp-delta">Calculating...</span>
+      </span>
+      <span class="mdi mdi-trophy ui-icon win-rp-icon" aria-hidden="true"></span>
+    </span>
+  `;
+
+  const finalEl = row.querySelector(".win-rp-final");
+  const deltaEl = row.querySelector(".win-rp-delta");
+
+  if (
+    finalEl &&
+    rankedRp &&
+    Number.isFinite(rankedRp.after) &&
+    Number.isFinite(rankedRp.before)
+  ) {
+    const animKey = `${s.round}|${myIndex}|${rankedRp.before}|${rankedRp.after}`;
+    animateWinRpValue(finalEl, rankedRp.before, rankedRp.after, animKey);
+  } else if (finalEl) {
+    finalEl.textContent = "--";
+  }
+
+  if (deltaEl) {
+    if (rankedRp && Number.isFinite(rankedRp.delta) && rankedRp.ready) {
+      deltaEl.textContent = `${formatSigned(rankedRp.delta)} RP`;
+      deltaEl.classList.toggle("rp-change-gain", rankedRp.delta > 0);
+      deltaEl.classList.toggle("rp-change-loss", rankedRp.delta < 0);
+    } else {
+      deltaEl.textContent = "Calculating...";
+      deltaEl.classList.remove("rp-change-gain", "rp-change-loss");
+    }
+  }
+}
+
+function renderWinSummary() {
+  const box = document.getElementById("winSummary");
+  if (!box || !gameState || myIndex === null || myIndex === undefined) return;
+
+  const s = gameState;
+
+  box.textContent = "";
 
   const regionHead = document.createElement("div");
   regionHead.className = "win-summary-head";
@@ -1513,53 +1650,6 @@ function renderWinSummary(iWon) {
     regionWrap.appendChild(row);
   }
   box.appendChild(regionWrap);
-
-  if (s.mode === "ranked") {
-    const rpHead = document.createElement("div");
-    rpHead.className = "win-summary-head";
-    rpHead.textContent = "Rift Points (RP)";
-    box.appendChild(rpHead);
-
-    const rpRow = document.createElement("div");
-    rpRow.className = "win-summary-row";
-
-    let before = null;
-    let after = null;
-    let delta = null;
-
-    if (
-      Array.isArray(s.rankedResult) &&
-      s.rankedResult[myIndex] &&
-      Number.isFinite(s.rankedResult[myIndex].eloBefore) &&
-      Number.isFinite(s.rankedResult[myIndex].eloAfter)
-    ) {
-      before = Math.round(s.rankedResult[myIndex].eloBefore);
-      after = Math.round(s.rankedResult[myIndex].eloAfter);
-      delta = Number.isFinite(s.rankedResult[myIndex].delta)
-        ? Math.round(s.rankedResult[myIndex].delta)
-        : after - before;
-    } else if (
-      Array.isArray(initialRankedElos) &&
-      Number.isFinite(initialRankedElos[myIndex]) &&
-      Array.isArray(s.playerElos) &&
-      Number.isFinite(s.playerElos[myIndex]) &&
-      Math.round(s.playerElos[myIndex]) !== initialRankedElos[myIndex]
-    ) {
-      before = initialRankedElos[myIndex];
-      after = Math.round(s.playerElos[myIndex]);
-      delta = after - before;
-    }
-
-    if (before !== null && after !== null && delta !== null) {
-      const deltaClass =
-        delta > 0 ? " rp-change-gain" : delta < 0 ? " rp-change-loss" : "";
-      rpRow.innerHTML = `<span class="k">Change</span><span class="v${deltaClass}">${formatSigned(delta)} RP (${before} → ${after})</span>`;
-    } else {
-      rpRow.innerHTML = `<span class="k">Change</span><span class="v">Calculating RP...</span>`;
-    }
-
-    box.appendChild(rpRow);
-  }
 }
 
 function showWinScreen(iWon) {
@@ -1568,15 +1658,18 @@ function showWinScreen(iWon) {
   trophy.textContent = "";
   trophy.classList.toggle("mdi-trophy", iWon);
   trophy.classList.toggle("mdi-skull", !iWon);
-  document.getElementById("winTitle").textContent = iWon
+  document.getElementById("winTitle").textContent = "Match Result";
+
+  document.getElementById("winDesc").textContent = iWon
     ? "Victory!"
     : "Defeated!";
-
-  document.getElementById("winDesc").textContent = gameOverReasonText(
+  document.getElementById("winReason").textContent = gameOverReasonText(
     gameState,
     iWon,
   );
-  renderWinSummary(iWon);
+  renderWinPointPill();
+  renderRankedRpRow();
+  renderWinSummary();
   win.classList.remove("hidden");
 }
 
