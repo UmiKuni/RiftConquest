@@ -2631,6 +2631,102 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   margin-bottom: 2rem;
 }
 
+.win-summary {
+  margin: 0 auto 1.35rem;
+  width: min(620px, 86vw);
+  display: grid;
+  gap: 0.55rem;
+  text-align: left;
+}
+
+.win-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.win-summary-row .k {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.win-summary-row .v {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.win-summary-row-score {
+  justify-content: center;
+}
+
+.win-vp-score {
+  font-size: 1.15rem;
+  letter-spacing: 0.01em;
+}
+
+.win-vp-my {
+  color: #2ecc71;
+}
+
+.win-vp-opp {
+  color: #ff4d4f;
+}
+
+.rp-change-gain {
+  color: #2ecc71 !important;
+}
+
+.rp-change-loss {
+  color: #ff4d4f !important;
+}
+
+.win-summary-head {
+  margin-top: 0.2rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+}
+
+.win-summary-regions {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.win-summary-region {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.38rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.win-summary-region .name {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.win-summary-region .score {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.win-summary-region .owner {
+  color: #f0d080;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 /* ── TOAST ──────────────────────────────────────────────────────────────── */
 .toast {
   position: fixed;

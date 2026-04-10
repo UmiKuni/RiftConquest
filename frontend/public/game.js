@@ -27,6 +27,7 @@ let myIndex = null;
 let selectedCard = null;
 let deployFaceDown = false;
 let lastRenderedRound = null;
+let initialRankedElos = null;
 
 // ─── Round Intro UI (Round title only) ─────────────────────────────────────
 const ROUND_INTRO_TITLE_MS = 900;
@@ -419,6 +420,18 @@ function render() {
   const names = Array.isArray(s.playerDisplayNames) ? s.playerDisplayNames : [];
   const isRanked = s.mode === "ranked";
   const elos = isRanked && Array.isArray(s.playerElos) ? s.playerElos : [];
+
+  if (
+    isRanked &&
+    !initialRankedElos &&
+    typeof elos[0] === "number" &&
+    Number.isFinite(elos[0]) &&
+    typeof elos[1] === "number" &&
+    Number.isFinite(elos[1])
+  ) {
+    initialRankedElos = [Math.round(elos[0]), Math.round(elos[1])];
+  }
+
   const myElo =
     typeof elos[myIndex] === "number" && Number.isFinite(elos[myIndex])
       ? Math.round(elos[myIndex])
@@ -1439,6 +1452,116 @@ function mkBtn(label, cls, onClick) {
 }
 
 // ─── Win Screen ────────────────────────────────────────────────────────────
+function formatSigned(n) {
+  const x = Math.round(Number(n) || 0);
+  return x > 0 ? `+${x}` : `${x}`;
+}
+
+function gameOverReasonText(s, iWon) {
+  if (!s) return "";
+  if (s.disconnectForfeit) {
+    return iWon
+      ? "Opp disconnected and forfeited the match."
+      : "You disconnected and forfeited the match.";
+  }
+  if (s.surrender) {
+    return iWon ? "Opp surrendered the match." : "You surrendered the match.";
+  }
+  return iWon ? "You reached 12 VP first." : "Opp reached 12 VP first.";
+}
+
+function regionWinnerLabelForViewer(myStr, oppStr, initiative) {
+  if (myStr > oppStr) return "You";
+  if (oppStr > myStr) return "Opp";
+  return initiative === myIndex ? "You (Initiative)" : "Opp (Initiative)";
+}
+
+function renderWinSummary(iWon) {
+  const box = document.getElementById("winSummary");
+  if (!box || !gameState || myIndex === null || myIndex === undefined) return;
+
+  const s = gameState;
+  const myVp = Number.isFinite(s.scores[myIndex]) ? s.scores[myIndex] : 0;
+  const oppVp = Number.isFinite(s.scores[1 - myIndex])
+    ? s.scores[1 - myIndex]
+    : 0;
+
+  box.textContent = "";
+
+  const vpRow = document.createElement("div");
+  vpRow.className = "win-summary-row win-summary-row-score";
+  vpRow.innerHTML = `<span class="v win-vp-score"><span class="win-vp-my">${myVp}</span> : <span class="win-vp-opp">${oppVp}</span></span>`;
+  box.appendChild(vpRow);
+
+  const regionHead = document.createElement("div");
+  regionHead.className = "win-summary-head";
+  regionHead.textContent = "Region Results";
+  box.appendChild(regionHead);
+
+  const regionWrap = document.createElement("div");
+  regionWrap.className = "win-summary-regions";
+  for (const region of getRegionOrder(s)) {
+    const myStr = calcStrengthClient(s, region, myIndex);
+    const oppStr = calcStrengthClient(s, region, 1 - myIndex);
+    const row = document.createElement("div");
+    row.className = "win-summary-region";
+    row.innerHTML = `
+      <span class="name">${region}</span>
+      <span class="score">You ${myStr} : ${oppStr} Opp</span>
+      <span class="owner">${regionWinnerLabelForViewer(myStr, oppStr, s.initiative)}</span>
+    `;
+    regionWrap.appendChild(row);
+  }
+  box.appendChild(regionWrap);
+
+  if (s.mode === "ranked") {
+    const rpHead = document.createElement("div");
+    rpHead.className = "win-summary-head";
+    rpHead.textContent = "Rift Points (RP)";
+    box.appendChild(rpHead);
+
+    const rpRow = document.createElement("div");
+    rpRow.className = "win-summary-row";
+
+    let before = null;
+    let after = null;
+    let delta = null;
+
+    if (
+      Array.isArray(s.rankedResult) &&
+      s.rankedResult[myIndex] &&
+      Number.isFinite(s.rankedResult[myIndex].eloBefore) &&
+      Number.isFinite(s.rankedResult[myIndex].eloAfter)
+    ) {
+      before = Math.round(s.rankedResult[myIndex].eloBefore);
+      after = Math.round(s.rankedResult[myIndex].eloAfter);
+      delta = Number.isFinite(s.rankedResult[myIndex].delta)
+        ? Math.round(s.rankedResult[myIndex].delta)
+        : after - before;
+    } else if (
+      Array.isArray(initialRankedElos) &&
+      Number.isFinite(initialRankedElos[myIndex]) &&
+      Array.isArray(s.playerElos) &&
+      Number.isFinite(s.playerElos[myIndex]) &&
+      Math.round(s.playerElos[myIndex]) !== initialRankedElos[myIndex]
+    ) {
+      before = initialRankedElos[myIndex];
+      after = Math.round(s.playerElos[myIndex]);
+      delta = after - before;
+    }
+
+    if (before !== null && after !== null && delta !== null) {
+      const deltaClass =
+        delta > 0 ? " rp-change-gain" : delta < 0 ? " rp-change-loss" : "";
+      rpRow.innerHTML = `<span class="k">Change</span><span class="v${deltaClass}">${formatSigned(delta)} RP (${before} → ${after})</span>`;
+    } else {
+      rpRow.innerHTML = `<span class="k">Change</span><span class="v">Calculating RP...</span>`;
+    }
+
+    box.appendChild(rpRow);
+  }
+}
+
 function showWinScreen(iWon) {
   const win = document.getElementById("winOverlay");
   const trophy = document.getElementById("winTrophy");
@@ -1449,15 +1572,11 @@ function showWinScreen(iWon) {
     ? "Victory!"
     : "Defeated!";
 
-  let desc = iWon
-    ? `You conquered the Rift with ${gameState.scores[myIndex]} VP!`
-    : `Opponent reached ${gameState.scores[1 - myIndex]} VP. Don't give up.`;
-
-  if (gameState.surrender) {
-    desc = iWon ? "Opponent surrendered!" : "You surrendered.";
-  }
-
-  document.getElementById("winDesc").textContent = desc;
+  document.getElementById("winDesc").textContent = gameOverReasonText(
+    gameState,
+    iWon,
+  );
+  renderWinSummary(iWon);
   win.classList.remove("hidden");
 }
 
