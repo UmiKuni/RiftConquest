@@ -238,7 +238,21 @@
           <!-- Room code display (after hosting) -->
           <div class="room-code-display hidden" id="roomDisplay">
             <p class="label">Room Code</p>
-            <p class="code" id="roomCodeText">----</p>
+            <div class="room-code-row">
+              <p class="code" id="roomCodeText">----</p>
+              <button
+                class="btn btn-secondary btn-sm room-code-copy"
+                id="btnCopyRoomCode"
+                type="button"
+                title="Copy room code"
+                aria-label="Copy room code"
+              >
+                <span
+                  class="mdi mdi-content-copy ui-icon"
+                  aria-hidden="true"
+                ></span>
+              </button>
+            </div>
             <p class="hint">
               Share this code with your opponent.<br /><span
                 class="waiting-pulse mdi mdi-timer-sand ui-icon"
@@ -246,6 +260,19 @@
               ></span>
               Waiting for opponent to join…
             </p>
+            <div class="room-host-actions">
+              <button
+                class="btn btn-secondary btn-sm"
+                id="btnCancelHostedRoom"
+                type="button"
+              >
+                <span
+                  class="mdi mdi-close-circle-outline ui-icon"
+                  aria-hidden="true"
+                ></span>
+                <span>Cancel Room</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -258,8 +285,8 @@
         >
           <div class="lobby-divider"><span>RANKED · MATCHMAKING</span></div>
 
-          <p class="lobby-note">
-            Ranked is for authenticated accounts. Casual is always available.
+          <p class="lobby-note" id="rankedAuthNote">
+            Ready for a real challenge? Login now and climb the leaderboard!
           </p>
 
           <div class="lobby-actions">

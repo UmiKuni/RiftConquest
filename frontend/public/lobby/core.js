@@ -21,6 +21,8 @@
     joinActions: document.getElementById("joinActions"),
     roomDisplay: document.getElementById("roomDisplay"),
     roomCodeText: document.getElementById("roomCodeText"),
+    btnCopyRoomCode: document.getElementById("btnCopyRoomCode"),
+    btnCancelHostedRoom: document.getElementById("btnCancelHostedRoom"),
     codeInput: document.getElementById("codeInput"),
     statusMsg: document.getElementById("statusMsg"),
 
@@ -63,6 +65,7 @@
     btnRankedCancel: document.getElementById("btnRankedCancel"),
     rankedQueueStatus: document.getElementById("rankedQueueStatus"),
     rankedQueueTimer: document.getElementById("rankedQueueTimer"),
+    rankedAuthNote: document.getElementById("rankedAuthNote"),
   };
 
   const state = {

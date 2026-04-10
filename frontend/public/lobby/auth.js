@@ -69,6 +69,8 @@
     if (el.btnLogin) el.btnLogin.classList.toggle("hidden", showAccount);
     if (el.loginFlyout) el.loginFlyout.classList.toggle("hidden", true);
     if (el.btnAccount) el.btnAccount.classList.toggle("hidden", !showAccount);
+    if (el.rankedAuthNote)
+      el.rankedAuthNote.classList.toggle("hidden", showAccount);
     if (!showAccount) setAccountMenuOpen(false);
   }
 

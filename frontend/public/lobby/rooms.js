@@ -10,6 +10,7 @@
 
   let roomOpBusyToken = null;
   let roomOpBusyTimeout = null;
+  let copyIconResetTimer = null;
 
   function clearRoomOpBusy() {
     if (roomOpBusyTimeout) {
@@ -35,6 +36,61 @@
   rcLobby.rooms = rcLobby.rooms || {};
   rcLobby.rooms.startBusy = startRoomOpBusy;
   rcLobby.rooms.clearBusy = clearRoomOpBusy;
+
+  function flashCopySuccessIcon() {
+    if (!el.btnCopyRoomCode) return;
+    const iconEl = el.btnCopyRoomCode.querySelector(".ui-icon");
+    if (!iconEl) return;
+
+    iconEl.classList.remove("mdi-content-copy");
+    iconEl.classList.add("mdi-check");
+
+    if (copyIconResetTimer) clearTimeout(copyIconResetTimer);
+    copyIconResetTimer = setTimeout(() => {
+      iconEl.classList.remove("mdi-check");
+      iconEl.classList.add("mdi-content-copy");
+      copyIconResetTimer = null;
+    }, 1000);
+  }
+
+  function getHostedRoomCode() {
+    const raw = el.roomCodeText
+      ? String(el.roomCodeText.textContent || "")
+      : "";
+    return raw.trim().toUpperCase();
+  }
+
+  function resetHostedRoomUi() {
+    if (el.roomDisplay) el.roomDisplay.classList.add("hidden");
+    if (el.joinActions) el.joinActions.classList.add("hidden");
+    if (el.mainActions) el.mainActions.classList.remove("hidden");
+    if (el.roomCodeText) el.roomCodeText.textContent = "----";
+
+    sessionStorage.removeItem("roomCode");
+    sessionStorage.removeItem("playerIndex");
+    sessionStorage.removeItem("myPlayerIndex");
+  }
+
+  async function copyTextToClipboard(text) {
+    if (
+      navigator.clipboard &&
+      typeof navigator.clipboard.writeText === "function" &&
+      window.isSecureContext
+    ) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "absolute";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
 
   // ─── Host ───────────────────────────────────────────────────────────────
   if (el.btnHost) {
@@ -63,6 +119,39 @@
     sessionStorage.setItem("roomCode", code);
     sessionStorage.setItem("playerIndex", "0");
     sessionStorage.setItem("myPlayerIndex", "0");
+  });
+
+  if (el.btnCopyRoomCode) {
+    el.btnCopyRoomCode.addEventListener("click", async () => {
+      const code = getHostedRoomCode();
+      if (code.length !== 4) return;
+
+      try {
+        await copyTextToClipboard(code);
+        flashCopySuccessIcon();
+      } catch {
+        // Ignore clipboard errors here; no status text is shown for copy action.
+      }
+    });
+  }
+
+  if (el.btnCancelHostedRoom) {
+    el.btnCancelHostedRoom.addEventListener("click", () => {
+      const code = getHostedRoomCode();
+      if (code.length !== 4) {
+        resetHostedRoomUi();
+        return;
+      }
+
+      startRoomOpBusy("Canceling room…");
+      socket.emit("cancelHostedRoom", { code });
+    });
+  }
+
+  socket.on("roomCanceled", () => {
+    clearRoomOpBusy();
+    resetHostedRoomUi();
+    rcLobby.setStatus("");
   });
 
   // ─── Join ───────────────────────────────────────────────────────────────

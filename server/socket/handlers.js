@@ -730,6 +730,40 @@ function registerSocketHandlers(io, roomManager) {
       console.log(`Room ${code} — game started`);
     });
 
+    // CANCEL HOSTED ROOM (lobby-only, before a match starts)
+    socket.on("cancelHostedRoom", (payload) => {
+      const found = roomManager.getRoomOfSocket(socket.id);
+      if (!found) return socket.emit("joinError", "No room to cancel.");
+
+      const { code, room } = found;
+      const requestedCode =
+        payload && typeof payload.code === "string"
+          ? payload.code.trim().toUpperCase()
+          : "";
+
+      if (requestedCode && requestedCode !== code) {
+        return socket.emit("joinError", "Room mismatch.");
+      }
+
+      const pIdx = roomManager.playerIndexOf(room, socket.id);
+      if (pIdx !== 0) {
+        return socket.emit("joinError", "Only host can cancel the room.");
+      }
+
+      if (room.state || room.players[1]) {
+        return socket.emit("joinError", "Cannot cancel after match starts.");
+      }
+
+      clearAllDisconnectTimers(room);
+      clearTurnTimer(room);
+      clearRoundIntroTimer(room);
+
+      delete rooms[code];
+      socket.leave(code);
+      socket.emit("roomCanceled", { code });
+      console.log(`Room ${code} canceled by host ${socket.id}`);
+    });
+
     // ROUND INTRO DONE (client finished local title intro)
     socket.on("roundIntroDone", (payload) => {
       const found = roomManager.getRoomOfSocket(socket.id);
