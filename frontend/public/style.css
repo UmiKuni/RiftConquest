@@ -1086,15 +1086,23 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
+  font-family: "Inter", sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  text-align: left;
+  text-transform: none;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+#codeInput.input-field {
   font-family: "Cinzel", serif;
   font-size: 1.1rem;
   letter-spacing: 0.3em;
   text-align: center;
   text-transform: uppercase;
-  outline: none;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
 }
 .score-block {
   background: rgba(30, 41, 59, 0.6);
