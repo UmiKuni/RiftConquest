@@ -2,6 +2,9 @@ const { getAdmin, getFirestore } = require("../firebaseAdmin");
 const { sanitizeDisplayName } = require("../utils/sanitize");
 
 const DEFAULT_ELO = 1000;
+const K_FACTOR_NEW_PLAYER = 60;
+const K_FACTOR_MID_PLAYER = 40;
+const K_FACTOR_VETERAN = 20;
 const DEFAULT_STATS = Object.freeze({
   elo: DEFAULT_ELO,
   matchTotal: 0,
@@ -40,8 +43,11 @@ function expectedScore(rA, rB) {
 }
 
 function kFactor(matchTotal) {
-  // Simple, stable ELO: new players move faster.
-  return matchTotal < 30 ? 32 : 24;
+  // Three-tier progression by experience:
+  // new: <30 matches, mid: 30-100 matches, veteran: >100 matches.
+  if (matchTotal < 30) return K_FACTOR_NEW_PLAYER;
+  if (matchTotal <= 100) return K_FACTOR_MID_PLAYER;
+  return K_FACTOR_VETERAN;
 }
 
 function clampRating(r) {
@@ -99,7 +105,6 @@ function decodeMatchHistoryCursor(cursorStr) {
     return null;
   }
 }
-
 
 function toMillis(value) {
   if (!value) return null;
