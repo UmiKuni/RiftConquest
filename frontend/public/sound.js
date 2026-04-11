@@ -40,6 +40,12 @@
       cooldownMs: 80,
       channel: "sfx",
     },
+    playingCard: {
+      src: "/sounds/sfx/sfx_playing_card.mp3",
+      volume: 0.78,
+      cooldownMs: 120,
+      channel: "sfx",
+    },
     backgroundFinding: {
       src: "/sounds/background/background_finding.mp3",
       volume: 0.34,

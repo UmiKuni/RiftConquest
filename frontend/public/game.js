@@ -990,6 +990,7 @@ function selectCard(card) {
 
 // ─── Deploy ────────────────────────────────────────────────────────────────
 function deployCard(cardId, region, faceDown) {
+  if (sfx) sfx.play("playingCard", { interrupt: true });
   socket.emit("playCard", { cardId, regionName: region, faceDown });
   selectedCard = null;
   deployFaceDown = false;
