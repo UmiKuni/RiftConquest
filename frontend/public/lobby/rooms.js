@@ -205,6 +205,11 @@
   // ─── Game Start ─────────────────────────────────────────────────────────
   socket.on("gameStarted", ({ code, playerIndex }) => {
     clearRoomOpBusy();
+    const isRankedMatchFound =
+      !!rcLobby.ranked &&
+      typeof rcLobby.ranked.isSearching === "function" &&
+      rcLobby.ranked.isSearching();
+
     const idxFromPayload =
       typeof playerIndex === "number"
         ? String(playerIndex)
@@ -216,7 +221,18 @@
       idxFromPayload || sessionStorage.getItem("playerIndex") || "0";
     sessionStorage.setItem("roomCode", code);
     sessionStorage.setItem("playerIndex", myIdx);
-    window.location.href = `/game.html?room=${code}&player=${myIdx}`;
+
+    const goToGame = () => {
+      window.location.href = `/game.html?room=${code}&player=${myIdx}`;
+    };
+
+    if (isRankedMatchFound && rcLobby.shared.sfx) {
+      rcLobby.shared.sfx.play("findingSuccess");
+      setTimeout(goToGame, 320);
+      return;
+    }
+
+    goToGame();
   });
 
   // ─── Errors ─────────────────────────────────────────────────────────────

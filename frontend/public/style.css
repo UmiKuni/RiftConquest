@@ -805,6 +805,127 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
   pointer-events: auto;
 }
 
+.lobby-settings-corner {
+  position: fixed;
+  right: 0.9rem;
+  bottom: 0.9rem;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.lobby-settings-corner > * {
+  pointer-events: auto;
+}
+
+.lobby-settings-toggle {
+  position: relative;
+  z-index: 2;
+  min-width: 8rem;
+}
+
+.lobby-settings-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  width: min(320px, calc(100vw - 1.8rem));
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 0.9rem;
+  backdrop-filter: blur(18px);
+  text-align: left;
+}
+
+.lobby-settings-title {
+  font-family: "Cinzel", serif;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-light);
+  margin-bottom: 0.75rem;
+}
+
+.sound-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+}
+
+.sound-setting-label {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+}
+
+.sound-toggle {
+  position: relative;
+  display: inline-flex;
+  width: 42px;
+  height: 24px;
+}
+
+.sound-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.sound-toggle-slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(200, 155, 60, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.sound-toggle-slider::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #d5c8a9;
+  transition: transform 0.2s ease;
+}
+
+.sound-toggle input:checked + .sound-toggle-slider {
+  background: rgba(200, 155, 60, 0.3);
+  border-color: rgba(200, 155, 60, 0.55);
+}
+
+.sound-toggle input:checked + .sound-toggle-slider::before {
+  transform: translateX(18px);
+  background: var(--gold-light);
+}
+
+.sound-setting-note {
+  margin-top: 0.6rem;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .lobby-settings-corner {
+    right: 0.65rem;
+    bottom: 0.65rem;
+  }
+
+  .lobby-settings-panel {
+    width: min(300px, calc(100vw - 1.3rem));
+  }
+}
+
 .leaderboard-flyout {
   width: min(360px, calc(100vw - 1.8rem));
   background: var(--bg-glass);

@@ -350,6 +350,52 @@
           </div>
         </div>
       </div>
+
+      <!-- Sound settings: fixed bottom-right -->
+      <div class="lobby-settings-corner" aria-label="Sound settings">
+        <button
+          class="btn btn-secondary btn-sm lobby-settings-toggle"
+          id="btnSoundSettingsToggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="soundSettingsPanel"
+        >
+          <span class="mdi mdi-cog-outline ui-icon" aria-hidden="true"></span>
+          <span>Settings</span>
+        </button>
+
+        <div class="lobby-settings-panel hidden" id="soundSettingsPanel">
+          <div class="lobby-settings-title">Sound Settings</div>
+
+          <label class="sound-setting-row">
+            <span class="sound-setting-label">SFX</span>
+            <span class="sound-toggle">
+              <input id="toggleSfx" type="checkbox" />
+              <span class="sound-toggle-slider" aria-hidden="true"></span>
+            </span>
+          </label>
+
+          <label class="sound-setting-row">
+            <span class="sound-setting-label">Background</span>
+            <span class="sound-toggle">
+              <input id="toggleBackground" type="checkbox" />
+              <span class="sound-toggle-slider" aria-hidden="true"></span>
+            </span>
+          </label>
+
+          <label class="sound-setting-row">
+            <span class="sound-setting-label">Voiceline</span>
+            <span class="sound-toggle">
+              <input id="toggleVoiceline" type="checkbox" />
+              <span class="sound-toggle-slider" aria-hidden="true"></span>
+            </span>
+          </label>
+
+          <p class="sound-setting-note">
+            Background and voiceline playback can be wired in a later update.
+          </p>
+        </div>
+      </div>
     </div>
 
     <script src="/vendor/firebase/firebase-app-compat.js"></script>
@@ -361,7 +407,9 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="ui-busy.js"></script>
     <script src="rc-shared.js"></script>
+    <script src="sound.js"></script>
     <script src="lobby/core.js"></script>
+    <script src="lobby/settings.js"></script>
     <script src="lobby/tabs.js"></script>
     <script src="lobby/leaderboard.js"></script>
     <script src="lobby/ranked.js"></script>

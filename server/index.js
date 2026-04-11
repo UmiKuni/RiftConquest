@@ -101,11 +101,13 @@ app.get("/api/me/matchHistory", async (req, res) => {
 
 const frontendPublicDir = path.join(__dirname, "..", "frontend", "public");
 const frontendImageDir = path.join(__dirname, "..", "frontend", "image");
+const frontendSoundsDir = path.join(__dirname, "..", "frontend", "sounds");
 const mdiDir = path.join(__dirname, "..", "node_modules", "@mdi", "font");
 const firebaseDir = path.join(__dirname, "..", "node_modules", "firebase");
 
 app.use(express.static(frontendPublicDir));
 app.use("/image", express.static(frontendImageDir));
+app.use("/sounds", express.static(frontendSoundsDir));
 app.use("/vendor/mdi", express.static(mdiDir));
 app.use("/vendor/firebase", express.static(firebaseDir));
 

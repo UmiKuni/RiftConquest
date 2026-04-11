@@ -66,6 +66,13 @@
     rankedQueueStatus: document.getElementById("rankedQueueStatus"),
     rankedQueueTimer: document.getElementById("rankedQueueTimer"),
     rankedAuthNote: document.getElementById("rankedAuthNote"),
+
+    // Settings
+    btnSoundSettingsToggle: document.getElementById("btnSoundSettingsToggle"),
+    soundSettingsPanel: document.getElementById("soundSettingsPanel"),
+    toggleSfx: document.getElementById("toggleSfx"),
+    toggleBackground: document.getElementById("toggleBackground"),
+    toggleVoiceline: document.getElementById("toggleVoiceline"),
   };
 
   const state = {
@@ -153,6 +160,7 @@
   rcLobby.leaderboard = rcLobby.leaderboard || {};
   rcLobby.rooms = rcLobby.rooms || {};
   rcLobby.tabs = rcLobby.tabs || {};
+  rcLobby.settings = rcLobby.settings || {};
 
   // Order-safe no-op placeholders.
   rcLobby.auth.setLoginFlyoutOpen =
@@ -162,4 +170,6 @@
     rcLobby.auth.setAccountMenuOpen || function () {};
   rcLobby.ranked.setAllowed = rcLobby.ranked.setAllowed || function () {};
   rcLobby.ranked.setSearching = rcLobby.ranked.setSearching || function () {};
+  rcLobby.settings.setOpen = rcLobby.settings.setOpen || function () {};
+  rcLobby.settings.refresh = rcLobby.settings.refresh || function () {};
 })();

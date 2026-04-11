@@ -16,6 +16,7 @@ function getRegionOrder(s) {
 const { busyPush, busyPop, identity, attachFirebaseAuthToSocket } =
   window.rcShared;
 const { getOrCreateDisplayName } = identity;
+const sfx = window.rcShared && window.rcShared.sfx ? window.rcShared.sfx : null;
 
 let connectBusyToken = busyPush("Connecting…");
 
@@ -128,7 +129,15 @@ const turnTimerUi = {
   running: false,
   tick: null,
   circumference: null,
+  countdownPlayed: false,
+  actorIndex: null,
 };
+
+function stopCountdownSfx() {
+  if (sfx && typeof sfx.stop === "function") {
+    sfx.stop("countdown10");
+  }
+}
 
 function actingPlayerIndexForTurnTimer(s) {
   if (!s) return null;
@@ -199,6 +208,16 @@ function updateTurnTimerUiNow() {
   setTurnTimerFraction(fraction);
 
   const remainingSec = Math.ceil(remainingMs / 1000);
+  if (
+    turnTimerUi.actorIndex === myIndex &&
+    remainingMs > 0 &&
+    remainingMs <= 10000 &&
+    !turnTimerUi.countdownPlayed
+  ) {
+    turnTimerUi.countdownPlayed = true;
+    if (sfx) sfx.play("countdown10", { interrupt: true });
+  }
+
   hostEl.title = `${remainingSec}s`;
   hostEl.setAttribute("aria-label", `Turn timer: ${remainingSec}s remaining`);
 }
@@ -217,6 +236,9 @@ function startTurnTimerLoop() {
 function syncTurnTimerFromState(s) {
   if (!s || s.phase !== "playing") {
     turnTimerUi.running = false;
+    turnTimerUi.countdownPlayed = false;
+    turnTimerUi.actorIndex = null;
+    stopCountdownSfx();
     stopTurnTimerLoop();
     setTurnTimerFraction(1);
 
@@ -231,6 +253,9 @@ function syncTurnTimerFromState(s) {
   const actor = actingPlayerIndexForTurnTimer(s);
   if (actor !== 0 && actor !== 1) {
     turnTimerUi.running = false;
+    turnTimerUi.countdownPlayed = false;
+    turnTimerUi.actorIndex = null;
+    stopCountdownSfx();
     stopTurnTimerLoop();
     setTurnTimerFraction(1);
 
@@ -242,11 +267,22 @@ function syncTurnTimerFromState(s) {
     return;
   }
 
+  const prevActor = turnTimerUi.actorIndex;
+  turnTimerUi.actorIndex = actor;
+  if (prevActor === myIndex && actor !== myIndex) {
+    turnTimerUi.countdownPlayed = false;
+    stopCountdownSfx();
+  }
+
   const key = turnTimerKeyForState(s);
   if (key !== turnTimerUi.key) {
     turnTimerUi.key = key;
     turnTimerUi.startedAtMs = Date.now();
     turnTimerUi.durationMs = TURN_TIMEOUT_MS;
+    turnTimerUi.countdownPlayed = false;
+    if (actor !== myIndex) {
+      stopCountdownSfx();
+    }
   }
 
   turnTimerUi.running = true;
@@ -779,7 +815,10 @@ function buildBoardCard(c, playerIdx, region, s, isUncovered) {
     `;
 
     // Hover → show card info in sidebar
-    card.addEventListener("mouseenter", () => showCardInfo(def));
+    card.addEventListener("mouseenter", () => {
+      if (sfx) sfx.play("cardHover");
+      showCardInfo(def);
+    });
     card.addEventListener("mouseleave", hideCardInfo);
   } else {
     card.className = "board-card facedown";
@@ -905,7 +944,10 @@ function renderHand(hand) {
       el.addEventListener("click", () => selectCard(card));
     }
     // Hover on hand card → show card info in sidebar
-    el.addEventListener("mouseenter", () => showCardInfo(card));
+    el.addEventListener("mouseenter", () => {
+      if (sfx) sfx.play("cardHover");
+      showCardInfo(card);
+    });
     el.addEventListener("mouseleave", hideCardInfo);
 
     container.appendChild(el);

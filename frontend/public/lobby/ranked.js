@@ -112,4 +112,7 @@
   rcLobby.ranked = rcLobby.ranked || {};
   rcLobby.ranked.setAllowed = setRankedAllowed;
   rcLobby.ranked.setSearching = setRankedSearching;
+  rcLobby.ranked.isSearching = function () {
+    return rankedSearching;
+  };
 })();
