@@ -10,9 +10,18 @@
   };
   const BACKGROUND_FADE_OUT_MS = 180;
   const BACKGROUND_FADE_IN_MS = 220;
+  const BACKGROUND_MAX_VOLUME = 0.24;
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
+  }
+
+  function capChannelVolume(channel, volume) {
+    const normalized = clamp(Number(volume) || 0, 0, 1);
+    if (channel === "background") {
+      return Math.min(normalized, BACKGROUND_MAX_VOLUME);
+    }
+    return normalized;
   }
 
   const SFX_CONFIG = {
@@ -53,22 +62,85 @@
       channel: "background",
       loop: true,
     },
-    backgroundIngame1: {
-      src: "/sounds/background/background_ingame1.mp3",
+    backgroundIngame1H: {
+      src: "/sounds/background/background_ingame1_H.mp3",
       volume: 0.34,
       cooldownMs: 0,
       channel: "background",
       loop: true,
     },
-    backgroundIngame2: {
-      src: "/sounds/background/background_ingame2.mp3",
+    backgroundIngame2H: {
+      src: "/sounds/background/background_ingame2_H.mp3",
       volume: 0.34,
       cooldownMs: 0,
       channel: "background",
       loop: true,
     },
-    backgroundIngame3: {
-      src: "/sounds/background/background_ingame3.mp3",
+    backgroundIngame3L: {
+      src: "/sounds/background/background_ingame3_L.mp3",
+      volume: 0.34,
+      cooldownMs: 0,
+      channel: "background",
+      loop: true,
+    },
+    backgroundIngame4L: {
+      src: "/sounds/background/background_ingame4_L.mp3",
+      volume: 0.34,
+      cooldownMs: 0,
+      channel: "background",
+      loop: true,
+    },
+    backgroundIngame5L: {
+      src: "/sounds/background/background_ingame5_L.mp3",
+      volume: 0.34,
+      cooldownMs: 0,
+      channel: "background",
+      loop: true,
+    },
+    backgroundIngame6L: {
+      src: "/sounds/background/background_ingame6_L.mp3",
+      volume: 0.34,
+      cooldownMs: 0,
+      channel: "background",
+      loop: true,
+    },
+    backgroundIngame7H: {
+      src: "/sounds/background/background_ingame7_H.mp3",
+      volume: 0.34,
+      cooldownMs: 0,
+      channel: "background",
+      loop: true,
+    },
+    backgroundIngame8H: {
+      src: "/sounds/background/background_ingame8_H.mp3",
+      volume: 0.34,
+      cooldownMs: 0,
+      channel: "background",
+      loop: true,
+    },
+    backgroundIngame9L: {
+      src: "/sounds/background/background_ingame9_L.mp3",
+      volume: 0.34,
+      cooldownMs: 0,
+      channel: "background",
+      loop: true,
+    },
+    backgroundIngame10H: {
+      src: "/sounds/background/background_ingame10_H.mp3",
+      volume: 0.34,
+      cooldownMs: 0,
+      channel: "background",
+      loop: true,
+    },
+    backgroundIngame11L: {
+      src: "/sounds/background/background_ingame11_L.mp3",
+      volume: 0.34,
+      cooldownMs: 0,
+      channel: "background",
+      loop: true,
+    },
+    backgroundIngame12H: {
+      src: "/sounds/background/background_ingame12_H.mp3",
       volume: 0.34,
       cooldownMs: 0,
       channel: "background",
@@ -296,7 +368,7 @@
 
       const requestedVolume =
         typeof opts.volume === "number" ? opts.volume : cfg.volume;
-      node.volume = clamp(requestedVolume, 0, 1);
+      node.volume = capChannelVolume(channel, requestedVolume);
       if (typeof opts.playbackRate === "number" && opts.playbackRate > 0) {
         node.playbackRate = opts.playbackRate;
       }
@@ -337,8 +409,10 @@
         ? Array.from(previousState.activeNodes)
         : [];
 
-    const targetVolume =
-      typeof opts.volume === "number" ? opts.volume : cfg.volume;
+    const targetVolume = capChannelVolume(
+      "background",
+      typeof opts.volume === "number" ? opts.volume : cfg.volume,
+    );
 
     const started = play(name, {
       ...opts,

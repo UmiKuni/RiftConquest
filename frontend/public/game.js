@@ -29,20 +29,77 @@ let selectedCard = null;
 let deployFaceDown = false;
 let lastRenderedRound = null;
 let initialRankedElos = null;
-const INGAME_BACKGROUND_TRACKS = [
-  "backgroundIngame1",
-  "backgroundIngame2",
-  "backgroundIngame3",
-];
+const INGAME_BACKGROUND_TRACKS = {
+  H: [
+    "backgroundIngame1H",
+    "backgroundIngame2H",
+    "backgroundIngame7H",
+    "backgroundIngame8H",
+    "backgroundIngame10H",
+    "backgroundIngame12H",
+  ],
+  L: [
+    "backgroundIngame3L",
+    "backgroundIngame4L",
+    "backgroundIngame5L",
+    "backgroundIngame6L",
+    "backgroundIngame9L",
+    "backgroundIngame11L",
+  ],
+};
+
+const ingameBackgroundState = {
+  lastRound: 0,
+  roundToTrack: new Map(),
+  usedTracks: new Set(),
+};
+
+function resetIngameBackgroundState() {
+  ingameBackgroundState.lastRound = 0;
+  ingameBackgroundState.roundToTrack.clear();
+  ingameBackgroundState.usedTracks.clear();
+}
+
+function assignIngameTrackForRound(round) {
+  const existing = ingameBackgroundState.roundToTrack.get(round);
+  if (existing) return existing;
+
+  const tempo = round % 2 === 1 ? "L" : "H";
+  const pool = INGAME_BACKGROUND_TRACKS[tempo] || [];
+  const available = pool.filter(
+    (name) => !ingameBackgroundState.usedTracks.has(name),
+  );
+  if (available.length === 0) return "";
+
+  const picked = available[Math.floor(Math.random() * available.length)];
+  ingameBackgroundState.roundToTrack.set(round, picked);
+  ingameBackgroundState.usedTracks.add(picked);
+  return picked;
+}
 
 function syncIngameBackgroundFromState(s) {
   if (!sfx || typeof sfx.playBackground !== "function") return;
   if (!s || !Number.isFinite(s.round) || s.round < 1) return;
   if (s.phase === "gameOver") return;
 
-  const idx = (Math.floor(s.round) - 1) % INGAME_BACKGROUND_TRACKS.length;
-  const trackName = INGAME_BACKGROUND_TRACKS[idx];
+  const round = Math.floor(s.round);
+
+  // New game or timeline rewind: reset sequence so round 1 starts with low-tempo.
+  if (
+    ingameBackgroundState.lastRound > 0 &&
+    round < ingameBackgroundState.lastRound
+  ) {
+    resetIngameBackgroundState();
+  }
+
+  const trackName = assignIngameTrackForRound(round);
+  if (!trackName) return;
+
   sfx.playBackground(trackName);
+
+  if (round > ingameBackgroundState.lastRound) {
+    ingameBackgroundState.lastRound = round;
+  }
 }
 
 // ─── Round Intro UI (Round title only) ─────────────────────────────────────
@@ -454,7 +511,7 @@ function render() {
   if (!gameState) return;
   const s = gameState;
 
-  // In-match background rotates by round (1 -> 2 -> 3 -> loop).
+  // In-match background: round 1 starts with low-tempo, then alternates L/H.
   syncIngameBackgroundFromState(s);
 
   // Round intro overlay (blocks input while phase === 'roundIntro').
