@@ -154,6 +154,11 @@
     "btnRankedFind",
     "btnRsContinue",
     "btnRsSurrender",
+    "btnShowJoin",
+    "btnCancelHostedRoom",
+    "btnRankedCancel",
+    "tabBtnRanked",
+    "tabBtnCasual",
   ]);
 
   const sfxState = {};
