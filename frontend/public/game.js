@@ -1047,7 +1047,6 @@ function selectCard(card) {
 
 // ─── Deploy ────────────────────────────────────────────────────────────────
 function deployCard(cardId, region, faceDown) {
-  if (sfx) sfx.play("playingCard", { interrupt: true });
   socket.emit("playCard", { cardId, regionName: region, faceDown });
   selectedCard = null;
   deployFaceDown = false;
@@ -1166,9 +1165,18 @@ function hideCardInfo() {
 // ─── Log ───────────────────────────────────────────────────────────────────
 let lastLogLength = 0;
 
-function isOpponentPlayLogEntry(entry) {
-  if (typeof entry !== "string") return false;
-  return /^Opp plays\b.*\bto\b/i.test(entry.trim());
+function parsePlayLogEntry(entry) {
+  if (typeof entry !== "string") return null;
+  const m = entry.trim().match(/^(You|Opp) plays\s+(.+?)\s+to\s+[A-Za-z]+\./i);
+  if (!m) return null;
+
+  const actor = m[1].trim();
+  const played = m[2].trim();
+  return {
+    actor,
+    played,
+    isFaceDown: /^facedown card$/i.test(played),
+  };
 }
 
 function renderLog(log) {
@@ -1180,8 +1188,19 @@ function renderLog(log) {
   lastLogLength = log.length;
 
   for (const entry of newEntries) {
-    if (shouldPlaySfxForThisBatch && isOpponentPlayLogEntry(entry)) {
-      if (sfx) sfx.play("playingCard", { interrupt: true });
+    const playEvt = parsePlayLogEntry(entry);
+    if (shouldPlaySfxForThisBatch && playEvt) {
+      if (sfx) {
+        sfx.play("playingCard", { interrupt: true });
+
+        if (
+          !playEvt.isFaceDown &&
+          typeof sfx.playCardVoiceline === "function"
+        ) {
+          const cardId = getCardIdByChampionName(playEvt.played);
+          if (cardId) sfx.playCardVoiceline(cardId, { interrupt: true });
+        }
+      }
     }
 
     const div = document.createElement("div");
@@ -1996,6 +2015,22 @@ function getCardDef(id) {
       ability: null,
     }
   );
+}
+
+function getCardIdByChampionName(championName) {
+  const needle =
+    typeof championName === "string" ? championName.trim().toLowerCase() : "";
+  if (!needle) return "";
+
+  for (const [id, def] of Object.entries(CARD_DEFS)) {
+    if (
+      typeof def?.champion === "string" &&
+      def.champion.toLowerCase() === needle
+    ) {
+      return id;
+    }
+  }
+  return "";
 }
 
 function getCardImagePath(cardId) {

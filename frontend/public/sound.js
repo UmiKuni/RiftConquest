@@ -55,6 +55,114 @@
       cooldownMs: 120,
       channel: "sfx",
     },
+    voicelineD1: {
+      src: "/sounds/voiceline/D1/Lux_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineD2: {
+      src: "/sounds/voiceline/D2/Quinn_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineD3: {
+      src: "/sounds/voiceline/D3/Garen_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineD4: {
+      src: "/sounds/voiceline/D4/Jarvan_IV_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineD5: {
+      src: "/sounds/voiceline/D5/Fiora_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineD6: {
+      src: "/sounds/voiceline/D6/Galio_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineI1: {
+      src: "/sounds/voiceline/I1/Ahri_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineI2: {
+      src: "/sounds/voiceline/I2/Zed_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineI3: {
+      src: "/sounds/voiceline/I3/Shen_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineI4: {
+      src: "/sounds/voiceline/I4/Yasuo_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineI5: {
+      src: "/sounds/voiceline/I5/Irelia_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineI6: {
+      src: "/sounds/voiceline/I6/Master_Yi_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineN1: {
+      src: "/sounds/voiceline/N1/Katarina_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineN2: {
+      src: "/sounds/voiceline/N2/Talon_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineN3: {
+      src: "/sounds/voiceline/N3/Darius_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineN4: {
+      src: "/sounds/voiceline/N4/Swain_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineN5: {
+      src: "/sounds/voiceline/N5/LeBlanc_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
+    voicelineN6: {
+      src: "/sounds/voiceline/N6/Draven_Select.ogg",
+      volume: 0.7,
+      cooldownMs: 120,
+      channel: "voiceline",
+    },
     backgroundFinding: {
       src: "/sounds/background/background_finding.mp3",
       volume: 0.34,
@@ -160,6 +268,27 @@
     "tabBtnRanked",
     "tabBtnCasual",
   ]);
+
+  const VOICELINE_CUE_BY_CARD_ID = {
+    D1: "voicelineD1",
+    D2: "voicelineD2",
+    D3: "voicelineD3",
+    D4: "voicelineD4",
+    D5: "voicelineD5",
+    D6: "voicelineD6",
+    I1: "voicelineI1",
+    I2: "voicelineI2",
+    I3: "voicelineI3",
+    I4: "voicelineI4",
+    I5: "voicelineI5",
+    I6: "voicelineI6",
+    N1: "voicelineN1",
+    N2: "voicelineN2",
+    N3: "voicelineN3",
+    N4: "voicelineN4",
+    N5: "voicelineN5",
+    N6: "voicelineN6",
+  };
 
   const sfxState = {};
   for (const name of Object.keys(SFX_CONFIG)) {
@@ -454,6 +583,16 @@
     return true;
   }
 
+  function playCardVoiceline(cardId, opts = {}) {
+    const key = typeof cardId === "string" ? cardId.trim().toUpperCase() : "";
+    const cueName = VOICELINE_CUE_BY_CARD_ID[key];
+    if (!cueName) return false;
+    return play(cueName, {
+      interrupt: true,
+      ...opts,
+    });
+  }
+
   function onImportantButtonClick(event) {
     const target = event.target;
     if (!target || !target.closest) return;
@@ -494,6 +633,7 @@
 
   rcShared.sfx = {
     play,
+    playCardVoiceline,
     stop,
     stopChannel,
     playBackground,
