@@ -227,6 +227,9 @@
     };
 
     if (isRankedMatchFound && rcLobby.shared.sfx) {
+      if (typeof rcLobby.shared.sfx.stop === "function") {
+        rcLobby.shared.sfx.stop("backgroundFinding");
+      }
       rcLobby.shared.sfx.play("findingSuccess");
       setTimeout(goToGame, 320);
       return;

@@ -8,6 +8,8 @@
     background: true,
     voiceline: true,
   };
+  const BACKGROUND_FADE_OUT_MS = 180;
+  const BACKGROUND_FADE_IN_MS = 220;
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
@@ -38,6 +40,34 @@
       cooldownMs: 80,
       channel: "sfx",
     },
+    backgroundFinding: {
+      src: "/sounds/background/background_finding.mp3",
+      volume: 0.34,
+      cooldownMs: 0,
+      channel: "background",
+      loop: true,
+    },
+    backgroundIngame1: {
+      src: "/sounds/background/background_ingame1.mp3",
+      volume: 0.34,
+      cooldownMs: 0,
+      channel: "background",
+      loop: true,
+    },
+    backgroundIngame2: {
+      src: "/sounds/background/background_ingame2.mp3",
+      volume: 0.34,
+      cooldownMs: 0,
+      channel: "background",
+      loop: true,
+    },
+    backgroundIngame3: {
+      src: "/sounds/background/background_ingame3.mp3",
+      volume: 0.34,
+      cooldownMs: 0,
+      channel: "background",
+      loop: true,
+    },
   };
 
   const IMPORTANT_CLICK_SFX_BUTTON_IDS = new Set([
@@ -52,9 +82,12 @@
   for (const name of Object.keys(SFX_CONFIG)) {
     sfxState[name] = {
       lastPlayedAt: 0,
+      lastNode: null,
       activeNodes: new Set(),
     };
   }
+  let activeBackgroundName = "";
+  const nodeFadeTimers = new WeakMap();
 
   function loadSoundSettings() {
     try {
@@ -102,10 +135,23 @@
     return { ...soundSettings };
   }
 
-  function stopAll() {
-    for (const name of Object.keys(sfxState)) {
-      stop(name);
+  function soundNamesForChannel(channel) {
+    return Object.entries(SFX_CONFIG)
+      .filter(([, cfg]) => cfg.channel === channel)
+      .map(([name]) => name);
+  }
+
+  function stopChannel(channel) {
+    if (!isKnownChannel(channel)) return false;
+
+    let stoppedAny = false;
+    for (const name of soundNamesForChannel(channel)) {
+      if (stop(name)) stoppedAny = true;
     }
+    if (channel === "background") {
+      activeBackgroundName = "";
+    }
+    return stoppedAny;
   }
 
   function setEnabled(channel, enabled) {
@@ -115,7 +161,10 @@
     saveSoundSettings();
 
     if (channel === "sfx" && !soundSettings.sfx) {
-      stopAll();
+      stopChannel("sfx");
+    }
+    if (channel === "background" && !soundSettings.background) {
+      stopChannel("background");
     }
     return true;
   }
@@ -132,14 +181,54 @@
     }
   }
 
+  function clearNodeFade(node) {
+    const timerId = nodeFadeTimers.get(node);
+    if (timerId) {
+      clearInterval(timerId);
+      nodeFadeTimers.delete(node);
+    }
+  }
+
+  function fadeNodeVolume(node, toVolume, durationMs, onDone) {
+    if (!node) {
+      if (typeof onDone === "function") onDone();
+      return;
+    }
+
+    clearNodeFade(node);
+
+    const target = clamp(toVolume, 0, 1);
+    const ms = Math.max(0, Number(durationMs) || 0);
+    if (ms === 0) {
+      node.volume = target;
+      if (typeof onDone === "function") onDone();
+      return;
+    }
+
+    const start = Date.now();
+    const from = clamp(Number(node.volume) || 0, 0, 1);
+    const timerId = setInterval(() => {
+      const t = Math.min(1, (Date.now() - start) / ms);
+      node.volume = clamp(from + (target - from) * t, 0, 1);
+      if (t >= 1) {
+        clearNodeFade(node);
+        if (typeof onDone === "function") onDone();
+      }
+    }, 24);
+    nodeFadeTimers.set(node, timerId);
+  }
+
   function stop(name) {
     const state = sfxState[name];
-    if (!state || state.activeNodes.size === 0) {
+    if (!state) {
       return false;
     }
 
+    const hadActive = state.activeNodes.size > 0;
+
     for (const node of state.activeNodes) {
       try {
+        clearNodeFade(node);
         node.pause();
         node.currentTime = 0;
       } catch {
@@ -147,7 +236,11 @@
       }
     }
     state.activeNodes.clear();
-    return true;
+    state.lastNode = null;
+    if (activeBackgroundName === name) {
+      activeBackgroundName = "";
+    }
+    return hadActive;
   }
 
   function play(name, opts = {}) {
@@ -162,7 +255,11 @@
 
     const now = Date.now();
     const cooldownMs = Number(cfg.cooldownMs) || 0;
-    if (cooldownMs > 0 && now - state.lastPlayedAt < cooldownMs) {
+    if (
+      !opts.ignoreCooldown &&
+      cooldownMs > 0 &&
+      now - state.lastPlayedAt < cooldownMs
+    ) {
       return false;
     }
     state.lastPlayedAt = now;
@@ -170,10 +267,23 @@
     try {
       const node = new Audio(cfg.src);
       node.preload = "auto";
+      node.loop = typeof opts.loop === "boolean" ? opts.loop : !!cfg.loop;
       state.activeNodes.add(node);
+      state.lastNode = node;
 
       const cleanup = () => {
+        clearNodeFade(node);
         state.activeNodes.delete(node);
+        if (state.lastNode === node) {
+          state.lastNode = null;
+        }
+        if (
+          channel === "background" &&
+          activeBackgroundName === name &&
+          state.activeNodes.size === 0
+        ) {
+          activeBackgroundName = "";
+        }
       };
       node.addEventListener("ended", cleanup, { once: true });
       node.addEventListener("error", cleanup, { once: true });
@@ -185,15 +295,78 @@
         node.playbackRate = opts.playbackRate;
       }
       const playPromise = node.play();
-      if (playPromise && typeof playPromise.catch === "function") {
-        playPromise.catch(() => {
-          cleanup();
-        });
+      if (playPromise && typeof playPromise.then === "function") {
+        playPromise
+          .then(() => {
+            if (channel === "background") {
+              activeBackgroundName = name;
+            }
+          })
+          .catch(() => {
+            cleanup();
+          });
+      } else if (channel === "background") {
+        activeBackgroundName = name;
       }
       return true;
     } catch {
       return false;
     }
+  }
+
+  function playBackground(name, opts = {}) {
+    const cfg = SFX_CONFIG[name];
+    const state = sfxState[name];
+    if (!cfg || !state || cfg.channel !== "background") return false;
+    if (!isEnabled("background")) return false;
+
+    if (activeBackgroundName === name && state.activeNodes.size > 0) {
+      return true;
+    }
+
+    const previousName = activeBackgroundName;
+    const previousState = previousName ? sfxState[previousName] : null;
+    const previousNodes =
+      previousState && previousName !== name
+        ? Array.from(previousState.activeNodes)
+        : [];
+
+    const targetVolume =
+      typeof opts.volume === "number" ? opts.volume : cfg.volume;
+
+    const started = play(name, {
+      ...opts,
+      ignoreCooldown: true,
+      loop: true,
+      volume: previousNodes.length > 0 ? 0 : targetVolume,
+    });
+    if (!started) return false;
+
+    activeBackgroundName = name;
+
+    const newNode = state.lastNode;
+    if (newNode && previousNodes.length > 0) {
+      fadeNodeVolume(newNode, targetVolume, BACKGROUND_FADE_IN_MS);
+    }
+
+    if (previousNodes.length > 0 && previousState) {
+      for (const prevNode of previousNodes) {
+        fadeNodeVolume(prevNode, 0, BACKGROUND_FADE_OUT_MS, () => {
+          try {
+            prevNode.pause();
+            prevNode.currentTime = 0;
+          } catch {
+            // Ignore best-effort stop failures.
+          }
+          previousState.activeNodes.delete(prevNode);
+          if (previousState.lastNode === prevNode) {
+            previousState.lastNode = null;
+          }
+        });
+      }
+    }
+
+    return true;
   }
 
   function onImportantButtonClick(event) {
@@ -220,7 +393,10 @@
         soundSettings[key] = next[key];
       }
       if (!soundSettings.sfx) {
-        stopAll();
+        stopChannel("sfx");
+      }
+      if (!soundSettings.background) {
+        stopChannel("background");
       }
     });
   }
@@ -234,6 +410,8 @@
   rcShared.sfx = {
     play,
     stop,
+    stopChannel,
+    playBackground,
     isEnabled,
     setEnabled,
     getSettings,

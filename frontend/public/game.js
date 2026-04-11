@@ -29,6 +29,21 @@ let selectedCard = null;
 let deployFaceDown = false;
 let lastRenderedRound = null;
 let initialRankedElos = null;
+const INGAME_BACKGROUND_TRACKS = [
+  "backgroundIngame1",
+  "backgroundIngame2",
+  "backgroundIngame3",
+];
+
+function syncIngameBackgroundFromState(s) {
+  if (!sfx || typeof sfx.playBackground !== "function") return;
+  if (!s || !Number.isFinite(s.round) || s.round < 1) return;
+  if (s.phase === "gameOver") return;
+
+  const idx = (Math.floor(s.round) - 1) % INGAME_BACKGROUND_TRACKS.length;
+  const trackName = INGAME_BACKGROUND_TRACKS[idx];
+  sfx.playBackground(trackName);
+}
 
 // ─── Round Intro UI (Round title only) ─────────────────────────────────────
 const ROUND_INTRO_TITLE_MS = 900;
@@ -438,6 +453,9 @@ socket.on("opponentLeft", () => {
 function render() {
   if (!gameState) return;
   const s = gameState;
+
+  // In-match background rotates by round (1 -> 2 -> 3 -> loop).
+  syncIngameBackgroundFromState(s);
 
   // Round intro overlay (blocks input while phase === 'roundIntro').
   syncRoundIntroOverlayFromState(s);

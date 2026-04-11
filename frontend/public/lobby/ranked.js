@@ -3,6 +3,7 @@
   if (!rcLobby || !rcLobby.el || !rcLobby.shared) return;
 
   const { socket } = rcLobby;
+  const sfx = rcLobby.shared.sfx || null;
   const {
     btnRankedFind,
     btnRankedCancel,
@@ -45,15 +46,31 @@
   }
 
   function setRankedSearching(isSearching) {
+    const wasSearching = rankedSearching;
     rankedSearching = !!isSearching;
+
     if (btnRankedFind) btnRankedFind.disabled = isSearching;
     if (btnRankedCancel)
       btnRankedCancel.classList.toggle("hidden", !isSearching);
     if (rankedQueueStatus)
       rankedQueueStatus.classList.toggle("hidden", !isSearching);
 
-    if (isSearching) startRankedTimer();
-    else stopRankedTimer({ reset: true });
+    if (rankedSearching && !wasSearching) {
+      startRankedTimer();
+      if (sfx && typeof sfx.playBackground === "function") {
+        sfx.playBackground("backgroundFinding");
+      }
+    }
+    if (!rankedSearching && wasSearching) {
+      stopRankedTimer({ reset: true });
+      if (sfx) {
+        if (typeof sfx.stop === "function") {
+          sfx.stop("backgroundFinding");
+        } else if (typeof sfx.stopChannel === "function") {
+          sfx.stopChannel("background");
+        }
+      }
+    }
 
     if (btnRankedFind)
       btnRankedFind.disabled = rankedSearching || !rankedAllowed;
