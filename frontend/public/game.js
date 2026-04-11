@@ -1171,6 +1171,13 @@ function makeAbilityRegionCardPicker(state, cfg = {}) {
   const emptyText = cfg.emptyText || "No valid cards";
   const selected = cfg.selected || null;
 
+  function isSelectedCard(c, idx, region) {
+    if (!selected) return false;
+    if (selected.region !== region) return false;
+    if (Number.isInteger(selected.index)) return selected.index === idx;
+    return !!selected.cardId && selected.cardId === c.id;
+  }
+
   for (const region of getRegionOrder(state)) {
     const tile = document.createElement("div");
     tile.className =
@@ -1198,7 +1205,7 @@ function makeAbilityRegionCardPicker(state, cfg = {}) {
     const myCards = state.regions[region][myIndex] || [];
     let shown = 0;
 
-    for (let idx = myCards.length - 1; idx >= 0; idx--) {
+    for (let idx = 0; idx < myCards.length; idx++) {
       const c = myCards[idx];
       if (!filterFn(c, idx, myCards, region)) continue;
 
@@ -1210,6 +1217,9 @@ function makeAbilityRegionCardPicker(state, cfg = {}) {
       const row = document.createElement("button");
       row.type = "button";
       row.className = "ability-region-card-row";
+      if (isSelectedCard(c, idx, region)) {
+        row.classList.add("selected");
+      }
 
       const name = document.createElement("span");
       name.className = "ability-row-name";
@@ -1255,78 +1265,40 @@ function makeAbilityRegionCardPicker(state, cfg = {}) {
 
 function makeAbilityMoveDestinationPicker(state, cfg = {}) {
   const root = document.createElement("div");
-  root.className = "ability-region-picker-grid";
+  root.className = "ability-destination-row";
 
   const fromRegion = cfg.fromRegion;
-  const fromIndex = cfg.fromIndex;
   const cardId = cfg.cardId;
   const onPick = typeof cfg.onPick === "function" ? cfg.onPick : null;
+  const hasSelection =
+    typeof fromRegion === "string" && fromRegion && typeof cardId === "string";
 
   for (const region of getRegionOrder(state)) {
-    const tile = document.createElement("div");
-    tile.className =
-      "ability-region-column" + (region === fromRegion ? " focus" : "");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn-secondary btn-sm ability-destination-btn";
+    btn.textContent = region;
 
-    const header = document.createElement("div");
-    header.className = "ability-region-header";
-
-    const title = document.createElement("div");
-    title.className = "ability-region-title";
-    title.textContent = region;
-
-    const before = getAbilityRegionScore(state, region);
-    const points = document.createElement("div");
-    points.className = "ability-region-points";
-    points.textContent = `Now ${before.my} : Opp ${before.opp}`;
-
-    header.appendChild(title);
-    header.appendChild(points);
-
-    const list = document.createElement("div");
-    list.className = "ability-region-card-list";
-
-    if (region === fromRegion) {
-      const note = document.createElement("div");
-      note.className = "ability-region-card-empty";
-      note.textContent = "Current region";
-      list.appendChild(note);
-    } else {
-      const preview = buildAbilityMovePreview(
-        state,
-        fromRegion,
-        fromIndex,
-        region,
-        cardId,
-      );
-      const after = getAbilityRegionScore(preview, region);
-      const delta = after.my - before.my;
-      const deltaLabel = delta >= 0 ? `+${delta}` : String(delta);
-
-      const row = document.createElement("button");
-      row.type = "button";
-      row.className = "ability-region-card-row destination";
-
-      const name = document.createElement("span");
-      name.className = "ability-row-name";
-      name.textContent = "Move here";
-
-      const meta = document.createElement("span");
-      meta.className = "ability-row-meta";
-      meta.textContent = `After ${after.my} : Opp ${after.opp} (You ${deltaLabel})`;
-
-      row.appendChild(name);
-      row.appendChild(meta);
-
-      if (onPick) {
-        row.addEventListener("click", () => onPick(region));
-      }
-
-      list.appendChild(row);
+    if (!hasSelection || region === fromRegion) {
+      btn.disabled = true;
+      btn.classList.add("disabled");
     }
 
-    tile.appendChild(header);
-    tile.appendChild(list);
-    root.appendChild(tile);
+    if (onPick) {
+      btn.addEventListener("click", () => {
+        if (btn.disabled) return;
+        onPick(region);
+      });
+    }
+
+    root.appendChild(btn);
+  }
+
+  if (!hasSelection) {
+    const note = document.createElement("div");
+    note.className = "ability-destination-note";
+    note.textContent = "Select a card first";
+    root.appendChild(note);
   }
 
   return root;
@@ -1397,42 +1369,67 @@ function openAbilityModal(ability, customLabel) {
     }
     case "I1_move": {
       desc.textContent =
-        "Choose one of your cards to move to a different region.";
-      let step = "pick";
-      let pickedCard = null;
-      let pickedFrom = null;
-      let pickedFromIndex = null;
+        "Select a card, then choose a different region. You can reselect anytime before confirming.";
 
-      opts.appendChild(
-        makeAbilityRegionCardPicker(gameState, {
-          emptyText: "No cards",
-          onPick: ({ card, cardDef, region, index }) => {
-            if (step !== "pick") return;
-            pickedCard = card.id;
-            pickedFrom = region;
-            pickedFromIndex = index;
-            step = "dest";
+      let selectedMove = null;
 
-            opts.innerHTML = "";
-            desc.textContent = `Move ${cardDef.champion} to which region?`;
-            opts.appendChild(
-              makeAbilityMoveDestinationPicker(gameState, {
-                fromRegion: pickedFrom,
-                fromIndex: pickedFromIndex,
-                cardId: pickedCard,
-                onPick: (toRegion) => {
-                  socket.emit("abilityResponse", {
-                    cardId: pickedCard,
-                    fromRegion: pickedFrom,
-                    toRegion,
-                  });
-                  closeModal();
-                },
-              }),
-            );
-          },
-        }),
-      );
+      const renderMoveChooser = () => {
+        opts.innerHTML = "";
+
+        const cardTitle = document.createElement("div");
+        cardTitle.className = "ability-section-label";
+        cardTitle.textContent = "1) Choose card";
+        opts.appendChild(cardTitle);
+
+        opts.appendChild(
+          makeAbilityRegionCardPicker(gameState, {
+            emptyText: "No cards",
+            selected: selectedMove
+              ? {
+                  region: selectedMove.fromRegion,
+                  index: selectedMove.fromIndex,
+                  cardId: selectedMove.cardId,
+                }
+              : null,
+            onPick: ({ card, cardDef, region, index }) => {
+              selectedMove = {
+                cardId: card.id,
+                cardName: cardDef.champion,
+                fromRegion: region,
+                fromIndex: index,
+              };
+              renderMoveChooser();
+            },
+          }),
+        );
+
+        const regionTitle = document.createElement("div");
+        regionTitle.className = "ability-section-label";
+        if (selectedMove) {
+          regionTitle.textContent = `2) Move ${selectedMove.cardName} to`;
+        } else {
+          regionTitle.textContent = "2) Choose destination region";
+        }
+        opts.appendChild(regionTitle);
+
+        opts.appendChild(
+          makeAbilityMoveDestinationPicker(gameState, {
+            fromRegion: selectedMove ? selectedMove.fromRegion : null,
+            cardId: selectedMove ? selectedMove.cardId : null,
+            onPick: (toRegion) => {
+              if (!selectedMove || toRegion === selectedMove.fromRegion) return;
+              socket.emit("abilityResponse", {
+                cardId: selectedMove.cardId,
+                fromRegion: selectedMove.fromRegion,
+                toRegion,
+              });
+              closeModal();
+            },
+          }),
+        );
+      };
+
+      renderMoveChooser();
 
       footer.appendChild(
         mkBtn("Skip", "btn btn-secondary btn-sm", () => {

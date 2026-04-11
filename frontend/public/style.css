@@ -2553,7 +2553,7 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   border: 1px solid var(--border-glow);
   border-radius: var(--radius-lg);
   padding: 2rem;
-  width: min(560px, 94vw);
+  width: min(660px, 96vw);
   box-shadow: var(--shadow-glow-gold), var(--shadow-card);
 }
 .modal-title {
@@ -2654,6 +2654,12 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   background: rgba(200, 155, 60, 0.08);
 }
 
+.ability-region-card-row.selected {
+  border-color: var(--gold);
+  background: rgba(200, 155, 60, 0.12);
+  box-shadow: 0 0 0 1px rgba(200, 155, 60, 0.18) inset;
+}
+
 .ability-region-card-row:active {
   transform: translateY(1px);
 }
@@ -2683,6 +2689,35 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   padding: 0.35rem 0.4rem;
   text-align: center;
 }
+
+.ability-section-label {
+  font-family: "Cinzel", serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--gold-light);
+  margin: 0.1rem 0 0.2rem;
+  text-transform: uppercase;
+}
+
+.ability-destination-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.ability-destination-btn {
+  width: 100%;
+  min-height: 2.15rem;
+}
+
+.ability-destination-note {
+  grid-column: 1 / -1;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 0.1rem;
+}
+
 .modal-option {
   display: flex;
   align-items: center;
