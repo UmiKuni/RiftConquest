@@ -1166,14 +1166,24 @@ function hideCardInfo() {
 // ─── Log ───────────────────────────────────────────────────────────────────
 let lastLogLength = 0;
 
+function isOpponentPlayLogEntry(entry) {
+  if (typeof entry !== "string") return false;
+  return /^Opp plays\b.*\bto\b/i.test(entry.trim());
+}
+
 function renderLog(log) {
   const container = document.getElementById("logScroll");
   if (!log || log.length === lastLogLength) return;
 
+  const shouldPlaySfxForThisBatch = lastLogLength > 0;
   const newEntries = log.slice(lastLogLength);
   lastLogLength = log.length;
 
   for (const entry of newEntries) {
+    if (shouldPlaySfxForThisBatch && isOpponentPlayLogEntry(entry)) {
+      if (sfx) sfx.play("playingCard", { interrupt: true });
+    }
+
     const div = document.createElement("div");
     div.className = "log-entry new";
     div.textContent = entry;
