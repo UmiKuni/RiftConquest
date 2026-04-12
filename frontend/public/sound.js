@@ -3,10 +3,16 @@
   if (rcShared.sfx) return;
 
   const SOUND_SETTINGS_STORAGE_KEY = "rc_sound_settings";
+  const SOUND_CHANNEL_VOLUMES_STORAGE_KEY = "rc_sound_channel_volumes";
   const DEFAULT_SOUND_SETTINGS = {
     sfx: true,
     background: true,
     voiceline: true,
+  };
+  const DEFAULT_CHANNEL_VOLUMES = {
+    sfx: 50,
+    background: 50,
+    voiceline: 50,
   };
   const BACKGROUND_FADE_OUT_MS = 180;
   const BACKGROUND_FADE_IN_MS = 220;
@@ -22,6 +28,10 @@
       return Math.min(normalized, BACKGROUND_MAX_VOLUME);
     }
     return normalized;
+  }
+
+  function normalizeVolumePercent(value) {
+    return Math.round(clamp(Number(value) || 0, 0, 100));
   }
 
   const SFX_CONFIG = {
@@ -318,6 +328,31 @@
     }
   }
 
+  function loadChannelVolumes() {
+    try {
+      const raw = localStorage.getItem(SOUND_CHANNEL_VOLUMES_STORAGE_KEY);
+      if (!raw) return { ...DEFAULT_CHANNEL_VOLUMES };
+      const parsed = JSON.parse(raw);
+      const normalized = { ...DEFAULT_CHANNEL_VOLUMES };
+      for (const key of Object.keys(DEFAULT_CHANNEL_VOLUMES)) {
+        if (Number.isFinite(parsed[key])) {
+          normalized[key] = normalizeVolumePercent(parsed[key]);
+        }
+      }
+      return normalized;
+    } catch {
+      return { ...DEFAULT_CHANNEL_VOLUMES };
+    }
+  }
+
+  function hasStoredChannelVolumes() {
+    try {
+      return localStorage.getItem(SOUND_CHANNEL_VOLUMES_STORAGE_KEY) != null;
+    } catch {
+      return false;
+    }
+  }
+
   function saveSoundSettings() {
     try {
       localStorage.setItem(
@@ -329,7 +364,47 @@
     }
   }
 
+  function saveChannelVolumes() {
+    try {
+      localStorage.setItem(
+        SOUND_CHANNEL_VOLUMES_STORAGE_KEY,
+        JSON.stringify(channelVolumes),
+      );
+    } catch {
+      // Ignore storage write failures.
+    }
+  }
+
   const soundSettings = loadSoundSettings();
+  const channelVolumes = loadChannelVolumes();
+  const hadStoredVolumes = hasStoredChannelVolumes();
+
+  if (!hadStoredVolumes) {
+    for (const key of Object.keys(DEFAULT_CHANNEL_VOLUMES)) {
+      channelVolumes[key] = soundSettings[key]
+        ? DEFAULT_CHANNEL_VOLUMES[key]
+        : 0;
+    }
+    saveChannelVolumes();
+  }
+
+  let settingsChanged = false;
+  for (const key of Object.keys(DEFAULT_SOUND_SETTINGS)) {
+    const enabledByVolume = getChannelVolume(key) > 0;
+    if (soundSettings[key] !== enabledByVolume) {
+      soundSettings[key] = enabledByVolume;
+      settingsChanged = true;
+    }
+  }
+  if (settingsChanged) {
+    saveSoundSettings();
+  }
+
+  function resolveEffectiveVolume(channel, requestedVolume) {
+    const baseVolume = clamp(Number(requestedVolume) || 0, 0, 1);
+    const scale = clamp((channelVolumes[channel] || 0) / 100, 0, 1);
+    return capChannelVolume(channel, baseVolume * scale);
+  }
 
   function isKnownChannel(channel) {
     return Object.prototype.hasOwnProperty.call(
@@ -344,7 +419,65 @@
   }
 
   function getSettings() {
-    return { ...soundSettings };
+    return {
+      ...soundSettings,
+      volumes: { ...channelVolumes },
+    };
+  }
+
+  function getChannelVolume(channel) {
+    if (!isKnownChannel(channel)) return 0;
+    return normalizeVolumePercent(channelVolumes[channel]);
+  }
+
+  function applyChannelVolumeToActiveNodes(
+    channel,
+    previousPercent,
+    nextPercent,
+  ) {
+    const prevScale = clamp(Number(previousPercent) / 100, 0, 1);
+    const nextScale = clamp(Number(nextPercent) / 100, 0, 1);
+
+    for (const [name, state] of Object.entries(sfxState)) {
+      const cfg = SFX_CONFIG[name];
+      if (!cfg || cfg.channel !== channel) continue;
+
+      for (const node of state.activeNodes) {
+        try {
+          if (prevScale > 0) {
+            const estimatedBase = (Number(node.volume) || 0) / prevScale;
+            node.volume = capChannelVolume(channel, estimatedBase * nextScale);
+          } else {
+            node.volume = resolveEffectiveVolume(channel, cfg.volume);
+          }
+        } catch {
+          // Ignore best-effort runtime updates.
+        }
+      }
+    }
+  }
+
+  function setChannelVolume(channel, volumePercent) {
+    if (!isKnownChannel(channel)) return false;
+
+    const next = normalizeVolumePercent(volumePercent);
+    const previous = getChannelVolume(channel);
+    channelVolumes[channel] = next;
+    saveChannelVolumes();
+
+    const shouldEnable = next > 0;
+    if (soundSettings[channel] !== shouldEnable) {
+      soundSettings[channel] = shouldEnable;
+      saveSoundSettings();
+    }
+
+    if (!shouldEnable) {
+      stopChannel(channel);
+      return true;
+    }
+
+    applyChannelVolumeToActiveNodes(channel, previous, next);
+    return true;
   }
 
   function soundNamesForChannel(channel) {
@@ -371,6 +504,11 @@
 
     soundSettings[channel] = !!enabled;
     saveSoundSettings();
+
+    if (soundSettings[channel] && getChannelVolume(channel) === 0) {
+      channelVolumes[channel] = DEFAULT_CHANNEL_VOLUMES[channel];
+      saveChannelVolumes();
+    }
 
     if (channel === "sfx" && !soundSettings.sfx) {
       stopChannel("sfx");
@@ -502,7 +640,7 @@
 
       const requestedVolume =
         typeof opts.volume === "number" ? opts.volume : cfg.volume;
-      node.volume = capChannelVolume(channel, requestedVolume);
+      node.volume = resolveEffectiveVolume(channel, requestedVolume);
       if (typeof opts.playbackRate === "number" && opts.playbackRate > 0) {
         node.playbackRate = opts.playbackRate;
       }
@@ -543,7 +681,7 @@
         ? Array.from(previousState.activeNodes)
         : [];
 
-    const targetVolume = capChannelVolume(
+    const targetVolume = resolveEffectiveVolume(
       "background",
       typeof opts.volume === "number" ? opts.volume : cfg.volume,
     );
@@ -611,16 +749,35 @@
     });
 
     window.addEventListener("storage", (event) => {
-      if (event.key !== SOUND_SETTINGS_STORAGE_KEY) return;
-      const next = loadSoundSettings();
-      for (const key of Object.keys(DEFAULT_SOUND_SETTINGS)) {
-        soundSettings[key] = next[key];
+      if (event.key === SOUND_SETTINGS_STORAGE_KEY) {
+        const next = loadSoundSettings();
+        for (const key of Object.keys(DEFAULT_SOUND_SETTINGS)) {
+          soundSettings[key] = next[key];
+        }
+        if (!soundSettings.sfx) {
+          stopChannel("sfx");
+        }
+        if (!soundSettings.background) {
+          stopChannel("background");
+        }
+        return;
       }
-      if (!soundSettings.sfx) {
-        stopChannel("sfx");
-      }
-      if (!soundSettings.background) {
-        stopChannel("background");
+
+      if (event.key === SOUND_CHANNEL_VOLUMES_STORAGE_KEY) {
+        const nextVolumes = loadChannelVolumes();
+        for (const key of Object.keys(DEFAULT_CHANNEL_VOLUMES)) {
+          const previous = getChannelVolume(key);
+          const next = normalizeVolumePercent(nextVolumes[key]);
+          channelVolumes[key] = next;
+
+          if (next <= 0) {
+            soundSettings[key] = false;
+            stopChannel(key);
+          } else {
+            if (!soundSettings[key]) soundSettings[key] = true;
+            applyChannelVolumeToActiveNodes(key, previous, next);
+          }
+        }
       }
     });
   }
@@ -639,6 +796,8 @@
     playBackground,
     isEnabled,
     setEnabled,
+    getChannelVolume,
+    setChannelVolume,
     getSettings,
   };
 })();

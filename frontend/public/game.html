@@ -400,6 +400,76 @@
       </button>
     </div>
 
+    <div class="game-settings-corner" aria-label="Sound settings">
+      <button
+        class="btn btn-secondary btn-sm game-settings-toggle"
+        id="btnGameSoundSettingsToggle"
+        type="button"
+        aria-label="Sound settings"
+        title="Sound settings"
+        aria-expanded="false"
+        aria-controls="gameSoundSettingsPanel"
+      >
+        <span class="mdi mdi-volume-high ui-icon" aria-hidden="true"></span>
+      </button>
+
+      <div class="game-settings-panel hidden" id="gameSoundSettingsPanel">
+        <div class="lobby-settings-title">Sound Settings</div>
+
+        <label class="sound-setting-row" for="gameVolumeSfx">
+          <span class="sound-setting-label">SFX</span>
+          <span class="sound-volume-control">
+            <input
+              id="gameVolumeSfx"
+              class="sound-volume-slider"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="50"
+            />
+            <span class="sound-volume-value" id="gameVolumeSfxValue">50%</span>
+          </span>
+        </label>
+
+        <label class="sound-setting-row" for="gameVolumeBackground">
+          <span class="sound-setting-label">Background</span>
+          <span class="sound-volume-control">
+            <input
+              id="gameVolumeBackground"
+              class="sound-volume-slider"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="50"
+            />
+            <span class="sound-volume-value" id="gameVolumeBackgroundValue"
+              >50%</span
+            >
+          </span>
+        </label>
+
+        <label class="sound-setting-row" for="gameVolumeVoiceline">
+          <span class="sound-setting-label">Voiceline</span>
+          <span class="sound-volume-control">
+            <input
+              id="gameVolumeVoiceline"
+              class="sound-volume-slider"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="50"
+            />
+            <span class="sound-volume-value" id="gameVolumeVoicelineValue"
+              >50%</span
+            >
+          </span>
+        </label>
+      </div>
+    </div>
+
     <script src="/vendor/firebase/firebase-app-compat.js"></script>
     <script src="/vendor/firebase/firebase-auth-compat.js"></script>
     <script src="/vendor/firebase/firebase-firestore-compat.js"></script>

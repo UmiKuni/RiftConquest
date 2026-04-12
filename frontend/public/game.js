@@ -398,6 +398,136 @@ function initEmojiBar() {
   });
 }
 
+function clampVolumePercent(value) {
+  return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+}
+
+function initGameSoundSettings() {
+  const btn = document.getElementById("btnGameSoundSettingsToggle");
+  const panel = document.getElementById("gameSoundSettingsPanel");
+  const volumeSfx = document.getElementById("gameVolumeSfx");
+  const volumeBackground = document.getElementById("gameVolumeBackground");
+  const volumeVoiceline = document.getElementById("gameVolumeVoiceline");
+  const volumeSfxValue = document.getElementById("gameVolumeSfxValue");
+  const volumeBackgroundValue = document.getElementById(
+    "gameVolumeBackgroundValue",
+  );
+  const volumeVoicelineValue = document.getElementById(
+    "gameVolumeVoicelineValue",
+  );
+
+  if (
+    !btn ||
+    !panel ||
+    !volumeSfx ||
+    !volumeBackground ||
+    !volumeVoiceline ||
+    !volumeSfxValue ||
+    !volumeBackgroundValue ||
+    !volumeVoicelineValue
+  ) {
+    return;
+  }
+
+  function readVolume(channel) {
+    if (sfx && typeof sfx.getChannelVolume === "function") {
+      return clampVolumePercent(sfx.getChannelVolume(channel));
+    }
+
+    if (sfx && typeof sfx.getSettings === "function") {
+      const settings = sfx.getSettings();
+      const fromVolumes =
+        settings && settings.volumes && typeof settings.volumes === "object"
+          ? settings.volumes[channel]
+          : null;
+      if (Number.isFinite(fromVolumes)) {
+        return clampVolumePercent(fromVolumes);
+      }
+      return settings && settings[channel] ? 50 : 0;
+    }
+
+    return 50;
+  }
+
+  function setVolumeInput(inputEl, valueEl, volume) {
+    const v = clampVolumePercent(volume);
+    inputEl.value = String(v);
+    valueEl.textContent = `${v}%`;
+  }
+
+  function refresh() {
+    setVolumeInput(volumeSfx, volumeSfxValue, readVolume("sfx"));
+    setVolumeInput(
+      volumeBackground,
+      volumeBackgroundValue,
+      readVolume("background"),
+    );
+    setVolumeInput(
+      volumeVoiceline,
+      volumeVoicelineValue,
+      readVolume("voiceline"),
+    );
+  }
+
+  function setOpen(isOpen) {
+    const open = !!isOpen;
+    panel.classList.toggle("hidden", !open);
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  function onVolumeInput(channel, inputEl, valueEl) {
+    const next = clampVolumePercent(inputEl.value);
+    if (sfx && typeof sfx.setChannelVolume === "function") {
+      sfx.setChannelVolume(channel, next);
+    } else if (sfx && typeof sfx.setEnabled === "function") {
+      sfx.setEnabled(channel, next > 0);
+    }
+    setVolumeInput(inputEl, valueEl, next);
+  }
+
+  btn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setOpen(panel.classList.contains("hidden"));
+  });
+
+  panel.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  document.addEventListener("click", () => {
+    setOpen(false);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      setOpen(false);
+    }
+  });
+
+  volumeSfx.addEventListener("input", () => {
+    onVolumeInput("sfx", volumeSfx, volumeSfxValue);
+  });
+  volumeBackground.addEventListener("input", () => {
+    onVolumeInput("background", volumeBackground, volumeBackgroundValue);
+  });
+  volumeVoiceline.addEventListener("input", () => {
+    onVolumeInput("voiceline", volumeVoiceline, volumeVoicelineValue);
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (
+      event.key !== "rc_sound_settings" &&
+      event.key !== "rc_sound_channel_volumes"
+    ) {
+      return;
+    }
+    refresh();
+  });
+
+  refresh();
+  setOpen(false);
+}
+
 function setEmojiBarDisabled(disabled) {
   const bar = document.getElementById("emojiBar");
   if (!bar) return;
@@ -462,6 +592,7 @@ guideOverlay.addEventListener("click", (e) => {
 });
 
 initEmojiBar();
+initGameSoundSettings();
 
 // ─── Socket Events ────────────────────────────────────────────────────────
 socket.on("connect", () => {

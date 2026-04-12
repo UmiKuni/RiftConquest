@@ -70,9 +70,12 @@
     // Settings
     btnSoundSettingsToggle: document.getElementById("btnSoundSettingsToggle"),
     soundSettingsPanel: document.getElementById("soundSettingsPanel"),
-    toggleSfx: document.getElementById("toggleSfx"),
-    toggleBackground: document.getElementById("toggleBackground"),
-    toggleVoiceline: document.getElementById("toggleVoiceline"),
+    volumeSfx: document.getElementById("volumeSfx"),
+    volumeBackground: document.getElementById("volumeBackground"),
+    volumeVoiceline: document.getElementById("volumeVoiceline"),
+    volumeSfxValue: document.getElementById("volumeSfxValue"),
+    volumeBackgroundValue: document.getElementById("volumeBackgroundValue"),
+    volumeVoicelineValue: document.getElementById("volumeVoicelineValue"),
   };
 
   const state = {

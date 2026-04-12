@@ -367,27 +367,55 @@
         <div class="lobby-settings-panel hidden" id="soundSettingsPanel">
           <div class="lobby-settings-title">Sound Settings</div>
 
-          <label class="sound-setting-row">
+          <label class="sound-setting-row" for="volumeSfx">
             <span class="sound-setting-label">SFX</span>
-            <span class="sound-toggle">
-              <input id="toggleSfx" type="checkbox" />
-              <span class="sound-toggle-slider" aria-hidden="true"></span>
+            <span class="sound-volume-control">
+              <input
+                id="volumeSfx"
+                class="sound-volume-slider"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="50"
+              />
+              <span class="sound-volume-value" id="volumeSfxValue">50%</span>
             </span>
           </label>
 
-          <label class="sound-setting-row">
+          <label class="sound-setting-row" for="volumeBackground">
             <span class="sound-setting-label">Background</span>
-            <span class="sound-toggle">
-              <input id="toggleBackground" type="checkbox" />
-              <span class="sound-toggle-slider" aria-hidden="true"></span>
+            <span class="sound-volume-control">
+              <input
+                id="volumeBackground"
+                class="sound-volume-slider"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="50"
+              />
+              <span class="sound-volume-value" id="volumeBackgroundValue"
+                >50%</span
+              >
             </span>
           </label>
 
-          <label class="sound-setting-row">
+          <label class="sound-setting-row" for="volumeVoiceline">
             <span class="sound-setting-label">Voiceline</span>
-            <span class="sound-toggle">
-              <input id="toggleVoiceline" type="checkbox" />
-              <span class="sound-toggle-slider" aria-hidden="true"></span>
+            <span class="sound-volume-control">
+              <input
+                id="volumeVoiceline"
+                class="sound-volume-slider"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="50"
+              />
+              <span class="sound-volume-value" id="volumeVoicelineValue"
+                >50%</span
+              >
             </span>
           </label>
         </div>

@@ -861,6 +861,27 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
   letter-spacing: 0.04em;
 }
 
+.sound-volume-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 190px;
+}
+
+.sound-volume-slider {
+  width: 130px;
+  accent-color: var(--gold);
+}
+
+.sound-volume-value {
+  min-width: 3.3rem;
+  text-align: right;
+  font-family: "Cinzel", serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--gold-light);
+}
+
 .sound-toggle {
   position: relative;
   display: inline-flex;
@@ -915,13 +936,59 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
   color: var(--text-secondary);
 }
 
+.game-settings-corner {
+  position: fixed;
+  right: calc(var(--sidebar-w) + 0.9rem);
+  bottom: 0.9rem;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.game-settings-corner > * {
+  pointer-events: auto;
+}
+
+.game-settings-toggle {
+  position: relative;
+  z-index: 2;
+  min-width: 2.35rem;
+  width: 2.35rem;
+  padding: 0.38rem 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-settings-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  width: min(320px, calc(100vw - 1.8rem));
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 0.9rem;
+  backdrop-filter: blur(18px);
+  text-align: left;
+}
+
 @media (max-width: 768px) {
   .lobby-settings-corner {
     right: 0.65rem;
     bottom: 0.65rem;
   }
 
+  .game-settings-corner {
+    right: calc(var(--sidebar-w) + 0.65rem);
+    bottom: 0.65rem;
+  }
+
   .lobby-settings-panel {
+    width: min(300px, calc(100vw - 1.3rem));
+  }
+
+  .game-settings-panel {
     width: min(300px, calc(100vw - 1.3rem));
   }
 }
