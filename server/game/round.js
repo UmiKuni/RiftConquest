@@ -9,6 +9,21 @@ function advanceTurn(state, code, room) {
   const pIdx = state.currentTurn;
   const oppIdx = 1 - pIdx;
 
+  function activateQuinnForCurrentTurn() {
+    if (
+      state.quinnEffectPending &&
+      state.quinnEffectPending[state.currentTurn] === true
+    ) {
+      state.quinnEffect[state.currentTurn] = true;
+      state.quinnEffectPending[state.currentTurn] = false;
+    }
+  }
+
+  // Quinn applies only for the player's next turn and expires when that turn ends.
+  if (state.quinnEffect && state.quinnEffect[pIdx]) {
+    state.quinnEffect[pIdx] = false;
+  }
+
   // Check for empty hands (both players)
   const bothEmpty = state.hands[0].length === 0 && state.hands[1].length === 0;
 
@@ -21,12 +36,14 @@ function advanceTurn(state, code, room) {
   if (state.extraTurn[0]) {
     state.extraTurn[0] = false;
     state.currentTurn = 0;
+    activateQuinnForCurrentTurn();
     state.log.push(`Player 1 gets an extra turn (Yasuo)!`);
     return;
   }
   if (state.extraTurn[1]) {
     state.extraTurn[1] = false;
     state.currentTurn = 1;
+    activateQuinnForCurrentTurn();
     state.log.push(`Player 2 gets an extra turn (Yasuo)!`);
     return;
   }
@@ -35,6 +52,7 @@ function advanceTurn(state, code, room) {
   if (state.withdrawn[oppIdx]) {
     if (state.hands[pIdx].length > 0) {
       state.currentTurn = pIdx;
+      activateQuinnForCurrentTurn();
     } else {
       endRound(state, code, room);
     }
@@ -43,6 +61,7 @@ function advanceTurn(state, code, room) {
 
   // Normal alternating turns
   state.currentTurn = oppIdx;
+  activateQuinnForCurrentTurn();
 }
 
 function endRound(state, code, room) {

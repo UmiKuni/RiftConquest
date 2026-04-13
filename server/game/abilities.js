@@ -100,7 +100,12 @@ function applyInstantAbility(state, cardId, playerIdx, playedRegion) {
 
     case "D2": {
       // Quinn — next turn deploy to non-matching
-      state.quinnEffect[playerIdx] = true;
+      if (!Array.isArray(state.quinnEffect)) state.quinnEffect = [false, false];
+      if (!Array.isArray(state.quinnEffectPending)) {
+        state.quinnEffectPending = [false, false];
+      }
+      state.quinnEffect[playerIdx] = false;
+      state.quinnEffectPending[playerIdx] = true;
       state.log.push(
         `Quinn: ${playerIdx === 0 ? "You" : "Opponent"} may play a card to a non-matching region next turn.`,
       );

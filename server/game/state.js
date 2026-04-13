@@ -53,7 +53,8 @@ function createGameState(initiative = 0) {
     hands: [[], []],
     withdrawn: [false, false],
     extraTurn: [false, false], // Yasuo effect
-    quinnEffect: [false, false], // Quinn effect
+    quinnEffect: [false, false], // Quinn active for current turn only
+    quinnEffectPending: [false, false], // Quinn granted, waiting for next turn
     regions: {
       Noxus: { 0: [], 1: [] },
       Demacia: { 0: [], 1: [] },
@@ -85,6 +86,7 @@ function startNewRound(state, opts = {}) {
   state.withdrawn = [false, false];
   state.extraTurn = [false, false];
   state.quinnEffect = [false, false];
+  state.quinnEffectPending = [false, false];
   state.pendingAbility = null;
   state.abilityQueue = [];
 
@@ -96,9 +98,7 @@ function startNewRound(state, opts = {}) {
     joined: waitForRejoin ? [false, false] : [true, true],
     done: [false, false],
   };
-  state.log.push(
-    `--- ROUND ${state.round} START ---`,
-  );
+  state.log.push(`--- ROUND ${state.round} START ---`);
   return state;
 }
 
