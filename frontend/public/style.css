@@ -580,24 +580,35 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
 
 /* ─── Region Badges (Round End) ─── */
 .region-result-badge {
-  font-size: 0.75rem;
-  font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: auto;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #fff;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 1.55rem;
+  height: 1.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 0 14px rgba(0, 0, 0, 0.5);
 }
 .region-result-badge.win {
-  background: rgba(16, 185, 129, 0.2);
-  border: 1px solid rgba(16, 185, 129, 0.8);
-  color: #10b981;
+  background: rgba(240, 208, 128, 0.24);
+  border: 1px solid rgba(240, 208, 128, 0.95);
+  color: #ffe19a;
+  text-shadow: 0 0 10px rgba(255, 225, 154, 0.55);
 }
 .region-result-badge.lose {
-  background: rgba(231, 76, 60, 0.2);
-  border: 1px solid rgba(231, 76, 60, 0.8);
-  color: #e74c3c;
+  background: rgba(140, 22, 22, 0.38);
+  border: 1px solid rgba(255, 107, 91, 0.9);
+  color: #ff8a7c;
+  text-shadow: 0 0 10px rgba(255, 107, 91, 0.5);
 }
 .lobby-logo .subtitle {
   font-family: "Cinzel", serif;
@@ -1710,8 +1721,20 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(255, 255, 255, 0.02);
   min-width: 0;
-  transition: box-shadow 0.2s;
+  transition:
+    box-shadow 0.2s,
+    filter 0.25s ease;
   background-blend-mode: overlay;
+}
+.region-col.region-outcome-win {
+  filter: brightness(1.2) saturate(1.1) contrast(1.06);
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 208, 128, 0.5),
+    0 0 28px rgba(240, 208, 128, 0.24);
+}
+.region-col.region-outcome-lose {
+  filter: brightness(0.52) saturate(0.6) contrast(0.9);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 .region-col.droppable-target {
   box-shadow:
@@ -1741,6 +1764,7 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
   padding: 0.35rem 0.6rem;
   flex-shrink: 0;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -1786,12 +1810,21 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
 
 .region-strength-bar {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.28rem;
   font-size: 0.7rem;
   font-family: "Cinzel", serif;
   align-items: center;
 }
+.region-strength-points {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  line-height: 1;
+  gap: 0.08rem;
+}
 .str-value {
+  display: block;
   font-weight: 700;
   font-size: 0.85rem;
 }
@@ -1801,9 +1834,6 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
 .str-opp {
   color: #ff3838;
   text-shadow: 0 0 8px rgba(255, 56, 56, 0.4);
-}
-.str-sep {
-  color: var(--text-muted);
 }
 .control-crown {
   font-size: 0.85rem;

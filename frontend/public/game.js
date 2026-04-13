@@ -891,7 +891,8 @@ function renderBoard(s) {
     const myCards = s.regions[region][myIndex] || [];
     const oppCards = s.regions[region][1 - myIndex] || [];
 
-    let crown = "";
+    let regionResultBadge = "";
+    let regionOutcomeClass = "";
     if (
       s.phase === "roundEnd" &&
       (!s.roundSummary || !s.roundSummary.reason.includes("Retreated"))
@@ -902,18 +903,17 @@ function renderBoard(s) {
       else rWinner = s.initiative;
 
       if (rWinner === myIndex) {
-        crown = '<span class="region-result-badge win">WON</span>';
+        regionResultBadge =
+          '<span class="region-result-badge win mdi mdi-trophy ui-icon" title="Victory in this region" aria-label="Victory in this region"></span>';
+        regionOutcomeClass = "region-outcome-win";
       } else {
-        crown = '<span class="region-result-badge lose">LOST</span>';
+        regionResultBadge =
+          '<span class="region-result-badge lose mdi mdi-skull ui-icon" title="Defeat in this region" aria-label="Defeat in this region"></span>';
+        regionOutcomeClass = "region-outcome-lose";
       }
-    } else {
-      if (myStr > oppStr)
-        crown =
-          '<span class="control-crown mdi mdi-crown ui-icon" title="You control this region" aria-hidden="true"></span>';
-      if (oppStr > myStr)
-        crown =
-          '<span class="control-crown mdi mdi-crown ui-icon" style="filter:grayscale(1)" title="Opponent controls this region" aria-hidden="true"></span>';
     }
+
+    if (regionOutcomeClass) col.classList.add(regionOutcomeClass);
 
     col.innerHTML = `
       <div class="region-body">
@@ -926,12 +926,12 @@ function renderBoard(s) {
             <img src="/image/Icon_${region}.webp" class="region-icon" alt="" onerror="this.style.display='none'">
             <span class="region-name">${region}</span>
           </div>
-          ${crown.includes("region-result-badge") ? crown : ""}
+          ${regionResultBadge}
           <div class="region-strength-bar">
-            <span class="str-value str-my">${myStr}</span>
-            <span class="str-sep">:</span>
-            <span class="str-value str-opp">${oppStr}</span>
-            ${!crown.includes("region-result-badge") ? crown : ""}
+            <div class="region-strength-points" aria-label="Region strength points">
+              <span class="str-value str-opp" title="Opponent">${oppStr}</span>
+              <span class="str-value str-my" title="You">${myStr}</span>
+            </div>
           </div>
         </div>
 
