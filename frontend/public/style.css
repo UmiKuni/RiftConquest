@@ -828,6 +828,18 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
   pointer-events: auto;
 }
 
+.lobby-version {
+  position: fixed;
+  left: 0.9rem;
+  bottom: 0.9rem;
+  z-index: 3;
+  pointer-events: none;
+  font-size: 0.66rem;
+  color: rgba(240, 230, 200, 0.6);
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
 .lobby-settings-toggle {
   position: relative;
   z-index: 2;
@@ -987,6 +999,11 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
 @media (max-width: 768px) {
   .lobby-settings-corner {
     right: 0.65rem;
+    bottom: 0.65rem;
+  }
+
+  .lobby-version {
+    left: 0.65rem;
     bottom: 0.65rem;
   }
 
