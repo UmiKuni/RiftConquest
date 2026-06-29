@@ -1,0 +1,20 @@
+{
+  "name": "riftconquest-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run sync:vendor && vite build",
+    "preview": "vite preview",
+    "sync:vendor": "node scripts/sync-vendor.js",
+    "postinstall": "node scripts/sync-vendor.js"
+  },
+  "dependencies": {
+    "@mdi/font": "^7.4.47",
+    "firebase": "^12.11.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.21"
+  }
+}

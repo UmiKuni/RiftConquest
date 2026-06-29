@@ -67,35 +67,58 @@ Choose **one** action:
 
 ### Install + run
 
+Run the backend and frontend in separate terminals:
+
 ```bash
+cd server
 npm install
 npm run dev
 ```
 
-Open:
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-- http://localhost:3001/
+Open the Vite app:
 
-> There is no build step and no automated tests in this repo currently.
+- http://localhost:5173/
+
+The backend runs on http://localhost:3001/ by default. Vite proxies `/api`,
+`/socket.io`, `/image`, and `/sounds` to the backend during local development.
 
 ## Project structure
 
+- `server/package.json` — backend runtime scripts and dependencies
 - `server/index.js` — Express server + Socket.io
+- `server/config/*` — backend path and environment configuration
 - `server/socket/*` — realtime game handlers + room management
 - `server/persistence/firestore.js` — Firestore persistence (ranked, leaderboard, match history)
-- `frontend/public/` — static client (served by Express)
+- `frontend/package.json` — Vite scripts and browser dependencies
+- `frontend/vite.config.js` — frontend dev/build configuration
+- `frontend/src/` — SPA entry, router, stores, and page modules
+- `frontend/public/` — static client and legacy game assets
 - `frontend/image/` — images served from `/image/*`
 
 Static routes (server):
 
-- `/` → `frontend/public/index.html`
-- `/image/*` → `frontend/image/*`
-- `/vendor/mdi/*` → `@mdi/font` assets
-- `/vendor/firebase/*` → Firebase Web SDK assets
+- `/` -> `frontend/dist/index.html` when built, with legacy public fallback
+- `/profile.html` -> `/profile`
+- `/game.html?...` -> `/game?...`
+- `/game?...` -> `frontend/public/game.html` until the game page is fully migrated
+- `/image/*` -> `frontend/image/*`
+- `/sounds/*` -> `frontend/sounds/*`
+- `/vendor/*` -> synced browser vendor assets from `frontend/public/vendor/*`
 
 ## Configuration
 
 ### Environment variables
+
+See `frontend/.env.example` and `server/.env.example`.
+For local backend config, copy `server/.env.example` to `server/.env`.
+The server loads `server/.env` automatically with `dotenv`; deployed environment
+variables still take precedence.
 
 - `PORT` — server port (defaults to `3001` locally)
 - `HOST` — bind host (defaults to `0.0.0.0`)
@@ -147,8 +170,8 @@ This project is a **stateful** Socket.io server with **in-memory rooms**.
 2. Render → **New** → **Web Service** → connect the repo
 3. Settings:
 
-- **Build Command**: `npm ci`
-- **Start Command**: `npm start`
+- **Build Command**: `cd frontend && npm ci && npm run build && cd ../server && npm ci`
+- **Start Command**: `cd server && npm start`
 
 4. Environment:
 

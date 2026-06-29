@@ -259,7 +259,11 @@
   if (el.btnViewProfile) {
     el.btnViewProfile.addEventListener("click", () => {
       setAccountMenuOpen(false);
-      window.location.href = "/profile.html";
+      if (typeof window.rcNavigate === "function") {
+        window.rcNavigate("/profile");
+      } else {
+        window.location.href = "/profile";
+      }
     });
   }
 

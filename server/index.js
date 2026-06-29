@@ -1,5 +1,8 @@
+require("./config/loadEnv");
+
 const path = require("path");
 const os = require("os");
+const fs = require("fs");
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -15,6 +18,15 @@ const {
 
 const { createRoomManager } = require("./socket/roomManager");
 const { registerSocketHandlers } = require("./socket/handlers");
+const { getServerEnv } = require("./config/env");
+const {
+  frontendPublicDir,
+  frontendDistDir,
+  frontendImageDir,
+  frontendSoundsDir,
+  frontendVendorDir,
+  spaIndexPath,
+} = require("./config/paths");
 
 const app = express();
 
@@ -99,17 +111,39 @@ app.get("/api/me/matchHistory", async (req, res) => {
   }
 });
 
-const frontendPublicDir = path.join(__dirname, "..", "frontend", "public");
-const frontendImageDir = path.join(__dirname, "..", "frontend", "image");
-const frontendSoundsDir = path.join(__dirname, "..", "frontend", "sounds");
-const mdiDir = path.join(__dirname, "..", "node_modules", "@mdi", "font");
-const firebaseDir = path.join(__dirname, "..", "node_modules", "firebase");
+const hasSpaBuild = fs.existsSync(spaIndexPath);
 
-app.use(express.static(frontendPublicDir));
 app.use("/image", express.static(frontendImageDir));
 app.use("/sounds", express.static(frontendSoundsDir));
-app.use("/vendor/mdi", express.static(mdiDir));
-app.use("/vendor/firebase", express.static(firebaseDir));
+app.use("/vendor", express.static(frontendVendorDir));
+
+app.get("/profile.html", (req, res) => {
+  res.redirect(302, "/profile");
+});
+
+app.get("/game.html", (req, res) => {
+  const query = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
+  res.redirect(302, `/game${query}`);
+});
+
+app.get("/game", (req, res) => {
+  res.sendFile(path.join(frontendPublicDir, "game.html"));
+});
+
+if (hasSpaBuild) {
+  app.use(express.static(frontendDistDir));
+}
+
+app.use(express.static(frontendPublicDir));
+
+if (hasSpaBuild) {
+  app.get(
+    /^\/(?!api\/|image\/|sounds\/|vendor\/|socket\.io\/).*/,
+    (req, res) => {
+      res.sendFile(spaIndexPath);
+    },
+  );
+}
 
 const server = http.createServer(app);
 const io = new Server(server);
@@ -117,8 +151,7 @@ const io = new Server(server);
 const roomManager = createRoomManager(io);
 registerSocketHandlers(io, roomManager);
 
-const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || "0.0.0.0";
+const { port: PORT, host: HOST } = getServerEnv();
 
 function getLanIpv4Addresses() {
   const nets = os.networkInterfaces();

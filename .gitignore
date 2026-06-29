@@ -33,6 +33,7 @@ desktop.ini
 # Build output (if added later)
 dist/
 build/
+frontend/public/vendor/
 
 .github/
 .claude/

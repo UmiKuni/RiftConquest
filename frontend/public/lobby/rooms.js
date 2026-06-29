@@ -223,7 +223,7 @@
     sessionStorage.setItem("playerIndex", myIdx);
 
     const goToGame = () => {
-      window.location.href = `/game.html?room=${code}&player=${myIdx}`;
+      window.location.href = `/game?room=${code}&player=${myIdx}`;
     };
 
     if (isRankedMatchFound && rcLobby.shared.sfx) {

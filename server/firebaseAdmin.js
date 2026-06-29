@@ -1,5 +1,8 @@
+require("./config/loadEnv");
+
 const fs = require("fs");
 const path = require("path");
+const { repoRoot } = require("./config/paths");
 
 let admin = null;
 let initAttempted = false;
@@ -7,11 +10,11 @@ let initError = null;
 
 function resolveMaybeRelative(p) {
   if (!p) return null;
-  return path.isAbsolute(p) ? p : path.join(process.cwd(), p);
+  return path.isAbsolute(p) ? p : path.join(repoRoot, p);
 }
 
 function tryFindLocalServiceAccountPath() {
-  const localDir = path.join(process.cwd(), ".local");
+  const localDir = path.join(repoRoot, ".local");
   if (!fs.existsSync(localDir)) return null;
 
   const files = fs.readdirSync(localDir);
