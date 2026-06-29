@@ -35,3 +35,6 @@ dist/
 build/
 
 .github/
+.claude/
+AGENTS.md
+CLAUDE.md
