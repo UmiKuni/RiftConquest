@@ -53,13 +53,17 @@
 html,
 body {
   width: 100%;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  overflow-x: hidden;
 }
 body {
   background: var(--bg-deep);
   color: var(--text-primary);
   font-family: "Inter", sans-serif;
+}
+
+#app {
+  min-height: 100vh;
 }
 
 /* ─── Scrollbar ───────────────────────────────────────────────────────────── */
@@ -3279,12 +3283,15 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
 /* SPA shell */
 .app-shell {
   min-height: 100vh;
-  color: var(--text);
-  background: #07090f;
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(192, 57, 43, 0.16), transparent 32rem),
+    radial-gradient(circle at 86% 18%, rgba(41, 128, 185, 0.14), transparent 30rem),
+    #07090f;
 }
 
 .app-topbar {
-  position: fixed;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
@@ -3296,14 +3303,14 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   min-height: 4.25rem;
   padding: 0.75rem clamp(1rem, 4vw, 3rem);
   background: rgba(7, 9, 15, 0.82);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(200, 155, 60, 0.22);
   backdrop-filter: blur(14px);
 }
 
 .app-brand,
 .app-nav-link {
   border: 0;
-  color: var(--text);
+  color: var(--text-primary);
   background: transparent;
   cursor: pointer;
 }
@@ -3331,7 +3338,7 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
 
 .app-nav-link:hover,
 .app-nav-link.active {
-  color: var(--text);
+  color: var(--text-primary);
   background: rgba(255, 255, 255, 0.09);
 }
 
@@ -3341,15 +3348,15 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
 }
 
 .app-main {
-  min-height: 100vh;
+  min-height: calc(100vh - 4.25rem);
 }
 
 .home-hero {
   position: relative;
   display: flex;
-  min-height: 86vh;
+  min-height: calc(100vh - 4.25rem);
   align-items: center;
-  padding: 7rem clamp(1.25rem, 6vw, 5rem) 5rem;
+  padding: clamp(4rem, 9vw, 8rem) clamp(1.25rem, 6vw, 5rem);
   overflow: hidden;
 }
 
@@ -3372,8 +3379,8 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(90deg, rgba(7, 9, 15, 0.94), rgba(7, 9, 15, 0.55)),
-    linear-gradient(0deg, rgba(7, 9, 15, 0.75), rgba(7, 9, 15, 0.05));
+    linear-gradient(90deg, rgba(7, 9, 15, 0.95), rgba(7, 9, 15, 0.62), rgba(7, 9, 15, 0.82)),
+    linear-gradient(0deg, rgba(7, 9, 15, 0.88), rgba(7, 9, 15, 0.08));
 }
 
 .home-hero-content {
@@ -3384,9 +3391,10 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
 
 .home-kicker {
   margin: 0 0 0.75rem;
-  color: var(--accent);
+  color: var(--gold-light);
   font-size: 0.82rem;
   font-weight: 800;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
@@ -3395,6 +3403,8 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   margin: 0;
   font-size: clamp(3rem, 8vw, 6.4rem);
   line-height: 0.95;
+  color: var(--gold-light);
+  text-shadow: 0 0 32px rgba(0, 0, 0, 0.58);
 }
 
 .home-copy,
@@ -3412,66 +3422,269 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   margin-top: 1.75rem;
 }
 
-.home-feature-band,
+.home-section {
+  padding: clamp(4rem, 8vw, 6.5rem) clamp(1.25rem, 6vw, 5rem);
+}
+
+.home-section-heading {
+  max-width: 48rem;
+  margin-bottom: 1.75rem;
+}
+
+.home-section-heading h2 {
+  margin: 0;
+  color: var(--gold-light);
+  font-size: clamp(2rem, 4vw, 3.8rem);
+  line-height: 1;
+}
+
+.home-section-heading p:not(.home-kicker) {
+  margin-top: 0.85rem;
+  color: rgba(240, 230, 200, 0.74);
+  line-height: 1.65;
+}
+
+.home-news {
+  background:
+    linear-gradient(180deg, #07090f, #10131c 22%, #10131c);
+}
+
+.home-news-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.24fr) minmax(20rem, 0.76fr);
+  gap: clamp(1rem, 3vw, 2rem);
+}
+
+.home-news-featured,
+.home-news-card,
+.home-stat-card,
+.guide-page-card,
+.guide-flow,
+.guide-scoring,
+.guide-final-cta {
+  border: 1px solid rgba(200, 155, 60, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
+    rgba(17, 24, 39, 0.8);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+}
+
+.home-news-featured {
+  position: relative;
+  min-height: 24rem;
+  overflow: hidden;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  background:
+    linear-gradient(145deg, rgba(7, 9, 15, 0.3), rgba(7, 9, 15, 0.8)),
+    url("/image/Bg_Demacia.jpg") center/cover no-repeat;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.home-news-featured:hover {
+  transform: translateY(-6px);
+  border-color: rgba(240, 208, 128, 0.55);
+  box-shadow:
+    0 26px 70px rgba(0, 0, 0, 0.36),
+    0 0 28px rgba(200, 155, 60, 0.16);
+}
+
+.home-news-featured::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 55%;
+  background: linear-gradient(0deg, rgba(7, 9, 15, 0.9), transparent);
+  pointer-events: none;
+}
+
+.home-news-featured > * {
+  position: relative;
+  z-index: 1;
+}
+
+.home-news-icon {
+  color: var(--gold-light);
+  font-size: 1.65rem;
+}
+
+.home-news-label {
+  display: inline-flex;
+  margin-bottom: 0.8rem;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.home-news-featured h3 {
+  max-width: 32rem;
+  margin: 7rem 0 0.75rem;
+  color: var(--text-primary);
+  font-family: "Cinzel", serif;
+  font-size: clamp(1.9rem, 4vw, 3.1rem);
+  line-height: 1.06;
+}
+
+.home-news-featured p,
+.home-news-card p,
+.home-stat-card p,
+.guide-flow li,
+.guide-page-card p,
+.guide-scoring p,
+.guide-final-cta p,
+.home-footer p {
+  color: rgba(240, 230, 200, 0.72);
+  line-height: 1.62;
+}
+
+.home-news-featured p {
+  max-width: 38rem;
+}
+
+.home-news-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.home-news-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1.1rem;
+}
+
+.home-news-card h3,
+.home-stat-card h3,
+.guide-page-card h2 {
+  margin: 0 0 0.45rem;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.home-stats {
+  background:
+    linear-gradient(180deg, #10131c, #0b0e15);
+}
+
+.home-stats-grid,
 .guide-page-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
-  padding: 2rem clamp(1.25rem, 6vw, 5rem) 4rem;
-  background: #10131c;
 }
 
-.home-feature-band article,
-.guide-page-card,
-.guide-scoring {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.045);
-  padding: 1.15rem;
+.home-stat-card {
+  padding: clamp(1.2rem, 3vw, 1.7rem);
 }
 
-.home-feature-band .ui-icon,
 .guide-page-card .ui-icon {
-  color: var(--accent);
+  color: var(--gold-light);
   font-size: 1.6rem;
 }
 
-.home-feature-band h2,
-.guide-page-card h2 {
-  margin: 0.75rem 0 0.45rem;
-  font-size: 1rem;
+.home-stat-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.12em;
+  min-height: 4rem;
+  color: var(--gold-light);
+  font-family: "Cinzel", serif;
+  font-size: clamp(2.7rem, 6vw, 4.7rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 0.96;
 }
 
-.home-feature-band p,
-.guide-page-card p,
-.guide-scoring p {
-  margin: 0;
-  color: rgba(244, 238, 222, 0.72);
-  line-height: 1.55;
+.home-footer {
+  display: grid;
+  grid-template-columns: minmax(18rem, 1.6fr) repeat(3, minmax(0, 1fr));
+  gap: 2rem;
+  padding: clamp(3rem, 6vw, 5rem) clamp(1.25rem, 6vw, 5rem);
+  border-top: 1px solid rgba(200, 155, 60, 0.18);
+  background: #07090f;
+}
+
+.home-footer h2,
+.home-footer h3 {
+  margin: 0 0 0.8rem;
+  color: var(--gold-light);
+}
+
+.home-footer button {
+  display: block;
+  width: fit-content;
+  border: 0;
+  margin: 0.45rem 0;
+  color: rgba(240, 230, 200, 0.78);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.home-footer button:hover {
+  color: var(--gold-light);
 }
 
 .guide-page {
   min-height: 100vh;
-  padding-top: 4.25rem;
-  background: #10131c;
+  background:
+    radial-gradient(circle at 20% 8%, rgba(142, 68, 173, 0.16), transparent 28rem),
+    #10131c;
 }
 
 .guide-page-header {
-  padding: 4rem clamp(1.25rem, 6vw, 5rem) 2rem;
+  padding: clamp(4rem, 8vw, 6rem) clamp(1.25rem, 6vw, 5rem);
   background:
-    linear-gradient(rgba(7, 9, 15, 0.74), rgba(7, 9, 15, 0.92)),
+    linear-gradient(90deg, rgba(7, 9, 15, 0.92), rgba(7, 9, 15, 0.62)),
+    linear-gradient(0deg, rgba(16, 19, 28, 1), rgba(16, 19, 28, 0.35)),
     url("/image/Bg_Ionia.jpg") center/cover no-repeat;
 }
 
+.guide-page-content {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2rem);
+  padding: clamp(3rem, 6vw, 5rem) clamp(1.25rem, 6vw, 5rem);
+}
+
+.guide-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(18rem, 1fr);
+  gap: clamp(1rem, 4vw, 3rem);
+  padding: clamp(1.25rem, 4vw, 2rem);
+}
+
+.guide-flow ol {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.guide-flow li::marker {
+  color: var(--gold-light);
+  font-family: "Cinzel", serif;
+  font-weight: 800;
+}
+
 .guide-page-grid {
-  padding-top: 2rem;
+  background: transparent;
+}
+
+.guide-page-card {
+  padding: 1.2rem;
 }
 
 .guide-scoring {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(18rem, 26rem);
   gap: 2rem;
-  margin: 0 clamp(1.25rem, 6vw, 5rem) 4rem;
+  padding: clamp(1.25rem, 4vw, 2rem);
 }
 
 .guide-scoring table {
@@ -3486,9 +3699,28 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
   text-align: left;
 }
 
+.guide-scoring th {
+  color: var(--gold-light);
+}
+
+.guide-final-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: clamp(1.25rem, 4vw, 2rem);
+}
+
+.guide-final-cta h2 {
+  margin: 0;
+  color: var(--gold-light);
+}
+
 .play-loading {
   display: grid;
   min-height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   place-items: center;
   padding: 2rem;
   background:
@@ -3589,6 +3821,7 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
 @media (max-width: 760px) {
   .app-topbar {
     grid-template-columns: 1fr auto;
+    align-items: start;
   }
 
   .app-nav {
@@ -3598,19 +3831,43 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
     overflow-x: auto;
   }
 
-  .home-feature-band,
+  .home-news-layout,
+  .home-stats-grid,
+  .home-footer,
+  .guide-flow,
   .guide-page-grid,
   .guide-scoring {
     grid-template-columns: 1fr;
   }
 
+  .home-footer {
+    gap: 1.25rem;
+  }
+
   .home-hero {
-    min-height: 82vh;
-    padding-top: 8.5rem;
+    min-height: calc(100vh - 7rem);
+    padding-block: 4rem;
+  }
+
+  .home-news-featured {
+    min-height: 20rem;
+  }
+
+  .home-news-featured h3 {
+    margin-top: 5rem;
+  }
+
+  .guide-final-cta {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .home-news-featured {
+    transition: none;
+  }
+
   .play-progress-fill::after {
     animation: none;
   }

@@ -33,48 +33,84 @@ const GUIDE_SECTIONS = [
   },
 ];
 
+const FLOW_STEPS = [
+  "Host a casual room or join with a room code from the Play screen.",
+  "Start the match once both players are ready in the lobby.",
+  "Take turns deploying cards, responding to ability prompts, or choosing a retreat.",
+  "Score the round, ready up, and continue until a player reaches 12 Victory Points.",
+];
+
 export function mount(root, { navigate }) {
   renderShell(root, {
     activePath: "/how-to-play",
     content: `
-      <section class="guide-page">
+      <section class="guide-page" aria-labelledby="guide-title">
         <div class="guide-page-header">
           <p class="home-kicker">New player guide</p>
-          <h1 class="cinzel">How To Play</h1>
+          <h1 id="guide-title" class="cinzel">How To Play</h1>
           <p>
             Learn the match goal, the lobby flow, and the core decisions you
             will make each turn.
           </p>
-        </div>
-        <div class="guide-page-grid">
-          ${GUIDE_SECTIONS.map(
-            (section) => `
-              <article class="guide-page-card">
-                <span class="mdi ${section.icon} ui-icon" aria-hidden="true"></span>
-                <h2>${section.title}</h2>
-                <p>${section.text}</p>
-              </article>
-            `,
-          ).join("")}
-        </div>
-        <section class="guide-scoring">
-          <div>
-            <h2 class="cinzel">Retreat Scoring</h2>
-            <p>When you retreat, your opponent scores from their remaining hand.</p>
+          <div class="home-actions">
+            <button class="btn btn-primary" type="button" data-nav="/play">
+              <span class="mdi mdi-sword-cross ui-icon" aria-hidden="true"></span>
+              <span>Play</span>
+            </button>
+            <button class="btn btn-secondary" type="button" data-nav="/home">
+              <span class="mdi mdi-home-outline ui-icon" aria-hidden="true"></span>
+              <span>Home</span>
+            </button>
           </div>
-          <table>
-            <thead>
-              <tr><th>Opponent cards left</th><th>VP gained</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>0</td><td>6</td></tr>
-              <tr><td>1</td><td>5</td></tr>
-              <tr><td>2</td><td>4</td></tr>
-              <tr><td>3</td><td>3</td></tr>
-              <tr><td>4-6</td><td>2</td></tr>
-            </tbody>
-          </table>
-        </section>
+        </div>
+        <div class="guide-page-content">
+          <section class="guide-flow" aria-labelledby="guide-flow-title">
+            <div class="home-section-heading">
+              <p class="home-kicker">Web flow</p>
+              <h2 id="guide-flow-title" class="cinzel">From Lobby To Victory</h2>
+            </div>
+            <ol>
+              ${FLOW_STEPS.map((step) => `<li>${step}</li>`).join("")}
+            </ol>
+          </section>
+          <section class="guide-page-grid" aria-label="Core rules">
+            ${GUIDE_SECTIONS.map(
+              (section) => `
+                <article class="guide-page-card">
+                  <span class="mdi ${section.icon} ui-icon" aria-hidden="true"></span>
+                  <h2>${section.title}</h2>
+                  <p>${section.text}</p>
+                </article>
+              `,
+            ).join("")}
+          </section>
+          <section class="guide-scoring">
+            <div>
+              <p class="home-kicker">Round pressure</p>
+              <h2 class="cinzel">Retreat Scoring</h2>
+              <p>When you retreat, your opponent scores from their remaining hand.</p>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Opponent cards left</th><th>VP gained</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>0</td><td>6</td></tr>
+                <tr><td>1</td><td>5</td></tr>
+                <tr><td>2</td><td>4</td></tr>
+                <tr><td>3</td><td>3</td></tr>
+                <tr><td>4-6</td><td>2</td></tr>
+              </tbody>
+            </table>
+          </section>
+          <div class="guide-final-cta">
+            <h2 class="cinzel">Ready To Try A Round?</h2>
+            <button class="btn btn-primary" type="button" data-nav="/play">
+              <span class="mdi mdi-sword-cross ui-icon" aria-hidden="true"></span>
+              <span>Play</span>
+            </button>
+          </div>
+        </div>
       </section>
     `,
   });
