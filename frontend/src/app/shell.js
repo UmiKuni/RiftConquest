@@ -1,5 +1,6 @@
 const NAV_ITEMS = [
   { path: "/home", label: "Home" },
+  { path: "/news", label: "News" },
   { path: "/how-to-play", label: "How To Play" },
   { path: "/cards", label: "Cards" },
 ];

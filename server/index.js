@@ -14,6 +14,7 @@ const {
   getMatchHistory,
   getLeaderboardPage,
 } = require("./persistence/firestore");
+const { getNewsPosts } = require("./content/newsPosts");
 
 const { createRoomManager } = require("./socket/roomManager");
 const { registerSocketHandlers } = require("./socket/handlers");
@@ -42,6 +43,17 @@ app.get("/health", (req, res) => {
 });
 
 // --- API: server-authoritative persistence ---
+app.get("/api/news", (req, res) => {
+  try {
+    const limit =
+      typeof req.query.limit === "string" ? Number(req.query.limit) : undefined;
+    res.json({ posts: getNewsPosts({ limit }) });
+  } catch (err) {
+    console.warn("[api] /api/news failed:", err && err.message);
+    res.status(500).json({ error: "Failed to load news." });
+  }
+});
+
 app.get("/api/leaderboard", async (req, res) => {
   try {
     const pageSize = req.query.pageSize;

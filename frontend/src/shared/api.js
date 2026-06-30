@@ -62,3 +62,15 @@ export async function checkBackendHealth() {
   const body = await readJsonResponse(res, "Backend is unavailable.");
   return body && body.ok === true;
 }
+
+export async function fetchNewsPosts({ limit } = {}) {
+  const params = new URLSearchParams();
+  if (limit) params.set("limit", String(limit));
+
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  const res = await fetch(`${apiUrl("/news")}${suffix}`, {
+    headers: { Accept: "application/json" },
+  });
+  const body = await readJsonResponse(res, "Failed to load news.");
+  return body && Array.isArray(body.posts) ? body.posts : [];
+}

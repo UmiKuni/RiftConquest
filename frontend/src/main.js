@@ -9,6 +9,7 @@ const router = createRouter({
   routes: {
     "/": () => import("./pages/home/redirect.js"),
     "/home": () => import("./pages/home/page.js"),
+    "/news": () => import("./pages/news/page.js"),
     "/how-to-play": () => import("./pages/how-to-play/page.js"),
     "/cards": () => import("./pages/cards/page.js"),
     "/play": () => import("./pages/lobby/page.js"),
