@@ -1,20 +1,25 @@
-export function mount(root, { route }) {
+import { backendBaseUrl } from "../../shared/backend.js";
+
+export function mount(root, { route, navigate }) {
+  const room = route.query.get("room");
+  const player = route.query.get("player");
+
+  if (!room || player === null) {
+    navigate("/play", { replace: true });
+    return;
+  }
+
+  const params = new URLSearchParams(route.search || "");
+  if (backendBaseUrl) params.set("backend", backendBaseUrl);
+
   root.innerHTML = `
-    <div class="lobby-bg">
-      <div class="lobby-card">
-        <div class="lobby-logo">
-          <h1 class="cinzel">Loading Match</h1>
-          <p class="subtitle">Opening the battle view...</p>
-        </div>
-      </div>
+    <div class="game-frame-page">
+      <iframe
+        class="game-frame"
+        title="RiftConquest match"
+        src="/game.html?${params.toString()}"
+        allow="autoplay"
+      ></iframe>
     </div>
   `;
-
-  const devBackendUrl =
-    window.location.port === "5173" ? "http://localhost:3001" : "";
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || devBackendUrl;
-  const gamePath = `/game${route.search || ""}`;
-  const targetUrl = backendUrl ? new URL(gamePath, backendUrl).toString() : gamePath;
-
-  window.location.replace(targetUrl);
 }

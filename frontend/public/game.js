@@ -544,7 +544,7 @@ const playerIndex = parseInt(
   params.get("player") ?? sessionStorage.getItem("playerIndex") ?? "0",
   10,
 );
-if (!roomCode) location.href = "/";
+if (!roomCode) window.top.location.href = "/play";
 
 // ─── Guide FAB ────────────────────────────────────────────────────────────
 const guideOverlay = document.getElementById("guideOverlay");
@@ -589,7 +589,7 @@ socket.on("joinError", (msg) => {
     connectBusyToken = null;
   }
   showToast(msg || "Room error.", true);
-  setTimeout(() => (location.href = "/"), 2500);
+  setTimeout(() => (window.top.location.href = "/play"), 2500);
 });
 
 socket.on("actionError", (msg) => showToast(msg, true));
@@ -601,7 +601,7 @@ socket.on("emojiReaction", (payload) => {
 
 socket.on("opponentLeft", () => {
   showToast("Opponent disconnected.", true);
-  setTimeout(() => (location.href = "/"), 3000);
+  setTimeout(() => (window.top.location.href = "/play"), 3000);
 });
 
 // ─── Main Render ──────────────────────────────────────────────────────────

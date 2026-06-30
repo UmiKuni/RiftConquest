@@ -94,7 +94,11 @@
       if (!token) return;
 
       try {
-        const res = await fetch("/api/me", {
+        const meUrl =
+          window.rcBackend && typeof window.rcBackend.api === "function"
+            ? window.rcBackend.api("/me")
+            : "/api/me";
+        const res = await fetch(meUrl, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) return;

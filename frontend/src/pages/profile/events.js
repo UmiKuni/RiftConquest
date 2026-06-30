@@ -55,6 +55,6 @@ export function bindProfileEvents(root, { store, navigate }) {
   }
 
   if (btnBackLobby) {
-    btnBackLobby.addEventListener("click", () => navigate("/"));
+    btnBackLobby.addEventListener("click", () => navigate("/play"));
   }
 }

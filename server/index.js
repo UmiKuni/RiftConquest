@@ -1,8 +1,7 @@
 require("./config/loadEnv");
 
-const path = require("path");
 const os = require("os");
-const fs = require("fs");
+const cors = require("cors");
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -19,18 +18,28 @@ const {
 const { createRoomManager } = require("./socket/roomManager");
 const { registerSocketHandlers } = require("./socket/handlers");
 const { getServerEnv } = require("./config/env");
-const {
-  frontendPublicDir,
-  frontendDistDir,
-  frontendImageDir,
-  frontendSoundsDir,
-  frontendVendorDir,
-  spaIndexPath,
-} = require("./config/paths");
+
+const { port: PORT, host: HOST, frontendOrigins } = getServerEnv();
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  return frontendOrigins.includes(origin);
+}
+
+const corsOptions = {
+  origin(origin, callback) {
+    callback(null, isAllowedOrigin(origin));
+  },
+};
 
 const app = express();
 
+app.use(cors(corsOptions));
 app.use(express.json());
+
+app.get("/health", (req, res) => {
+  res.json({ ok: true, service: "riftconquest-server" });
+});
 
 // --- API: server-authoritative persistence ---
 app.get("/api/leaderboard", async (req, res) => {
@@ -111,47 +120,17 @@ app.get("/api/me/matchHistory", async (req, res) => {
   }
 });
 
-const hasSpaBuild = fs.existsSync(spaIndexPath);
-
-app.use("/image", express.static(frontendImageDir));
-app.use("/sounds", express.static(frontendSoundsDir));
-app.use("/vendor", express.static(frontendVendorDir));
-
-app.get("/profile.html", (req, res) => {
-  res.redirect(302, "/profile");
-});
-
-app.get("/game.html", (req, res) => {
-  const query = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
-  res.redirect(302, `/game${query}`);
-});
-
-app.get("/game", (req, res) => {
-  res.sendFile(path.join(frontendPublicDir, "game.html"));
-});
-
-if (hasSpaBuild) {
-  app.use(express.static(frontendDistDir));
-}
-
-app.use(express.static(frontendPublicDir));
-
-if (hasSpaBuild) {
-  app.get(
-    /^\/(?!api\/|image\/|sounds\/|vendor\/|socket\.io\/).*/,
-    (req, res) => {
-      res.sendFile(spaIndexPath);
-    },
-  );
-}
-
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin(origin, callback) {
+      callback(null, isAllowedOrigin(origin));
+    },
+  },
+});
 
 const roomManager = createRoomManager(io);
 registerSocketHandlers(io, roomManager);
-
-const { port: PORT, host: HOST } = getServerEnv();
 
 function getLanIpv4Addresses() {
   const nets = os.networkInterfaces();

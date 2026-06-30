@@ -1,4 +1,5 @@
 import { getShared } from "./auth.js";
+import { apiUrl, healthUrl } from "./backend.js";
 
 async function authHeaders(user) {
   const shared = getShared();
@@ -21,7 +22,7 @@ async function readJsonResponse(res, fallbackMessage) {
 }
 
 export async function fetchMe(user) {
-  const res = await fetch("/api/me", {
+  const res = await fetch(apiUrl("/me"), {
     headers: await authHeaders(user),
   });
   const body = await readJsonResponse(res, "Failed to load profile.");
@@ -29,7 +30,9 @@ export async function fetchMe(user) {
 }
 
 export async function fetchMatchHistory(user, limit = 20) {
-  const url = `/api/me/matchHistory?limit=${encodeURIComponent(String(limit))}`;
+  const url = `${apiUrl("/me/matchHistory")}?limit=${encodeURIComponent(
+    String(limit),
+  )}`;
   const res = await fetch(url, {
     headers: await authHeaders(user),
   });
@@ -38,7 +41,7 @@ export async function fetchMatchHistory(user, limit = 20) {
 }
 
 export async function saveDisplayName(user, displayName) {
-  const res = await fetch("/api/me/displayName", {
+  const res = await fetch(apiUrl("/me/displayName"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -50,4 +53,12 @@ export async function saveDisplayName(user, displayName) {
   return body && typeof body.displayName === "string"
     ? body.displayName
     : displayName;
+}
+
+export async function checkBackendHealth() {
+  const res = await fetch(healthUrl(), {
+    headers: { Accept: "application/json" },
+  });
+  const body = await readJsonResponse(res, "Backend is unavailable.");
+  return body && body.ok === true;
 }

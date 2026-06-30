@@ -24,7 +24,11 @@ async function fetchMe(user) {
   const token = await getIdTokenSafe(user);
   if (!token) throw new Error("Missing auth token.");
 
-  const res = await fetch("/api/me", {
+  const meUrl =
+    window.rcBackend && typeof window.rcBackend.api === "function"
+      ? window.rcBackend.api("/me")
+      : "/api/me";
+  const res = await fetch(meUrl, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const body = await res.json().catch(() => null);
@@ -40,7 +44,11 @@ async function fetchMatchHistory(user, limit = 20) {
   const token = await getIdTokenSafe(user);
   if (!token) throw new Error("Missing auth token.");
 
-  const url = `/api/me/matchHistory?limit=${encodeURIComponent(String(limit))}`;
+  const historyUrl =
+    window.rcBackend && typeof window.rcBackend.api === "function"
+      ? window.rcBackend.api("/me/matchHistory")
+      : "/api/me/matchHistory";
+  const url = `${historyUrl}?limit=${encodeURIComponent(String(limit))}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -58,7 +66,11 @@ async function saveDisplayName(user, displayName) {
   const token = await getIdTokenSafe(user);
   if (!token) throw new Error("Missing auth token.");
 
-  const res = await fetch("/api/me/displayName", {
+  const displayNameUrl =
+    window.rcBackend && typeof window.rcBackend.api === "function"
+      ? window.rcBackend.api("/me/displayName")
+      : "/api/me/displayName";
+  const res = await fetch(displayNameUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -363,7 +375,7 @@ if (btnSave) {
 const btnBackLobby = document.getElementById("btnBackLobby");
 if (btnBackLobby) {
   btnBackLobby.addEventListener("click", () => {
-    window.location.href = "/";
+    window.location.href = "/play";
   });
 }
 

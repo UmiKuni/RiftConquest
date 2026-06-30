@@ -85,8 +85,8 @@ Open the Vite app:
 
 - http://localhost:5173/
 
-The backend runs on http://localhost:3001/ by default. Vite proxies `/api`,
-`/socket.io`, `/image`, and `/sounds` to the backend during local development.
+The backend runs on http://localhost:3001/ by default. The frontend uses
+`VITE_BACKEND_URL` for `/api`, `/health`, and Socket.io calls.
 
 ## Project structure
 
@@ -98,19 +98,24 @@ The backend runs on http://localhost:3001/ by default. Vite proxies `/api`,
 - `frontend/package.json` — Vite scripts and browser dependencies
 - `frontend/vite.config.js` — frontend dev/build configuration
 - `frontend/src/` — SPA entry, router, stores, and page modules
-- `frontend/public/` — static client and legacy game assets
-- `frontend/image/` — images served from `/image/*`
+- `frontend/public/` — browser vendor files and legacy game page assets
+- `frontend/image/` — frontend-owned images copied into the production build
+- `frontend/sounds/` — frontend-owned audio copied into the production build
 
-Static routes (server):
+Frontend routes:
 
-- `/` -> `frontend/dist/index.html` when built, with legacy public fallback
-- `/profile.html` -> `/profile`
-- `/game.html?...` -> `/game?...`
-- `/game?...` -> `frontend/public/game.html` until the game page is fully migrated
-- `/image/*` -> `frontend/image/*`
-- `/sounds/*` -> `frontend/sounds/*`
-- `/vendor/*` -> synced browser vendor assets from `frontend/public/vendor/*`
+- `/` -> `/home`
+- `/home` -> landing page
+- `/how-to-play` -> beginner guide
+- `/play` -> lobby loading flow and lobby
+- `/game?room=CODE&player=N` -> active match client
+- `/profile` -> account profile
 
+Backend routes:
+
+- `/health` -> backend health check
+- `/api/*` -> persistence/profile/leaderboard API
+- `/socket.io/*` -> realtime game transport
 ## Configuration
 
 ### Environment variables
@@ -122,6 +127,8 @@ variables still take precedence.
 
 - `PORT` — server port (defaults to `3001` locally)
 - `HOST` — bind host (defaults to `0.0.0.0`)
+- `FRONTEND_ORIGIN` — allowed browser origin for API and Socket.io CORS
+- `VITE_BACKEND_URL` — frontend build/dev backend URL, such as `http://localhost:3001`
 - `FIREBASE_SERVICE_ACCOUNT_PATH` — path to a Firebase Admin service-account JSON (server)
 - `GOOGLE_APPLICATION_CREDENTIALS` — alternative to `FIREBASE_SERVICE_ACCOUNT_PATH`
 
@@ -158,24 +165,28 @@ Never commit the service-account JSON key.
   - Create a Firestore database for the project
   - Deploy rules/indexes with Firebase CLI if needed (see `firebase.json`, `firestore.rules`, `firestore.indexes.json`)
 
-## Deployment (Render)
+## Deployment (Vercel + Render)
 
-This project is a **stateful** Socket.io server with **in-memory rooms**.
+The frontend is a Vite SPA that can deploy to Vercel. The backend is a
+stateful Socket.io server that can deploy to Render.
 
-- Start with **1 instance** on Render (multiple instances will split players/rooms unless you add shared state like Redis + a Socket.io adapter).
+- Start the backend with **1 instance** on Render (multiple instances will split players/rooms unless you add shared state like Redis + a Socket.io adapter).
 
-### Steps
+### Backend: Render
 
 1. Push your repo to GitHub
 2. Render → **New** → **Web Service** → connect the repo
 3. Settings:
 
-- **Build Command**: `cd frontend && npm ci && npm run build && cd ../server && npm ci`
-- **Start Command**: `cd server && npm start`
+- **Root Directory**: `server`
+- **Build Command**: `npm ci`
+- **Start Command**: `npm start`
 
 4. Environment:
 
 - Render automatically provides `PORT` — do not hardcode `3001` in production
+- `HOST=0.0.0.0`
+- `FRONTEND_ORIGIN=https://your-vercel-app.vercel.app`
 - (Optional) `NODE_ENV=production`
 
 5. Firebase Admin (for ranked features):
@@ -186,9 +197,34 @@ This project is a **stateful** Socket.io server with **in-memory rooms**.
 - Render → Environment → **Environment Variables**:
   - `FIREBASE_SERVICE_ACCOUNT_PATH=/etc/secrets/firebase-service-account.json`
 
-6. Firebase Console → Authentication → **Authorized domains**:
+### Frontend: Vercel
 
-- Add `your-service-name.onrender.com` (and your custom domain if you use one)
+1. Vercel → **New Project** → connect the repo
+2. Settings:
+
+- **Root Directory**: `frontend`
+- **Build Command**: `npm run build`
+- **Output Directory**: `dist`
+
+3. Environment:
+
+- `VITE_BACKEND_URL=https://your-render-backend.onrender.com`
+
+4. Firebase Console → Authentication → **Authorized domains**:
+
+- Add `your-vercel-app.vercel.app` and any custom frontend domain.
+
+### Legacy Single-Service Render
+
+The backend is now API-only, so the old single-service deployment is no longer
+the recommended production path.
+
+- **Build Command**: `cd server && npm ci`
+- **Start Command**: `cd server && npm start`
+
+### Firebase Console
+
+- Add the frontend domain, not only the backend domain.
 
 ## Notes for contributors
 

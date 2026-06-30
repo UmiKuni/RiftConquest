@@ -1,4 +1,4 @@
-import profileHtml from "../../../public/profile.html?raw";
+import profileHtml from "./template.html?raw";
 import { fetchMatchHistory, fetchMe } from "../../shared/api.js";
 import { getFirebaseAuth, getShared } from "../../shared/auth.js";
 import { pageBodyHtml } from "../../shared/dom.js";

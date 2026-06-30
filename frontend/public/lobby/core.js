@@ -9,7 +9,10 @@
   if (rcLobby.__initialized) return;
   rcLobby.__initialized = true;
 
-  const socket = io();
+  const socket =
+    window.rcSocket && typeof window.rcSocket.createSocket === "function"
+      ? window.rcSocket.createSocket()
+      : io(window.rcBackend ? window.rcBackend.socketUrl() : undefined);
 
   const el = {
     // Room

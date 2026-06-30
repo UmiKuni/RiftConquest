@@ -361,7 +361,7 @@
         </div>
         <div class="win-ranked-rp-row hidden" id="winRankedRpRow"></div>
         <div class="win-summary" id="winSummary"></div>
-        <button class="btn btn-primary" onclick="location.href = '/'">
+        <button class="btn btn-primary" onclick="window.top.location.href = '/play'">
           <span class="mdi mdi-sword-cross ui-icon" aria-hidden="true"></span>
           <span>Play Again</span>
         </button>
@@ -473,10 +473,11 @@
     <script src="/vendor/firebase/firebase-app-compat.js"></script>
     <script src="/vendor/firebase/firebase-auth-compat.js"></script>
     <script src="/vendor/firebase/firebase-firestore-compat.js"></script>
+    <script src="backend-config.js"></script>
     <script src="firebase-config.js"></script>
     <script src="firebase-client.js"></script>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="/vendor/socket.io/socket.io.js"></script>
     <script src="ui-busy.js"></script>
     <script src="rc-shared.js"></script>
     <script src="sound.js"></script>

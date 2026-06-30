@@ -3271,3 +3271,347 @@ body.round-intro-active > :not(#roundIntroOverlay):not(#uiBusyOverlay) {
     gap: 0.4rem;
   }
 }
+
+/* SPA shell */
+.app-shell {
+  min-height: 100vh;
+  color: var(--text);
+  background: #07090f;
+}
+
+.app-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  min-height: 4.25rem;
+  padding: 0.75rem clamp(1rem, 4vw, 3rem);
+  background: rgba(7, 9, 15, 0.82);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+}
+
+.app-brand,
+.app-nav-link {
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.app-brand {
+  justify-self: start;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.app-nav-link {
+  min-height: 2.5rem;
+  padding: 0 0.85rem;
+  border-radius: 8px;
+  font-weight: 700;
+  color: rgba(244, 238, 222, 0.76);
+}
+
+.app-nav-link:hover,
+.app-nav-link.active {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.app-play-btn {
+  justify-self: end;
+  min-width: 7rem;
+}
+
+.app-main {
+  min-height: 100vh;
+}
+
+.home-hero {
+  position: relative;
+  display: flex;
+  min-height: 86vh;
+  align-items: center;
+  padding: 7rem clamp(1.25rem, 6vw, 5rem) 5rem;
+  overflow: hidden;
+}
+
+.home-hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.home-hero-media video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.05) contrast(1.08);
+}
+
+.home-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(90deg, rgba(7, 9, 15, 0.94), rgba(7, 9, 15, 0.55)),
+    linear-gradient(0deg, rgba(7, 9, 15, 0.75), rgba(7, 9, 15, 0.05));
+}
+
+.home-hero-content {
+  position: relative;
+  z-index: 2;
+  width: min(42rem, 100%);
+}
+
+.home-kicker {
+  margin: 0 0 0.75rem;
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.home-hero h1,
+.guide-page-header h1 {
+  margin: 0;
+  font-size: clamp(3rem, 8vw, 6.4rem);
+  line-height: 0.95;
+}
+
+.home-copy,
+.guide-page-header p {
+  max-width: 42rem;
+  color: rgba(244, 238, 222, 0.82);
+  font-size: 1.08rem;
+  line-height: 1.7;
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-top: 1.75rem;
+}
+
+.home-feature-band,
+.guide-page-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 2rem clamp(1.25rem, 6vw, 5rem) 4rem;
+  background: #10131c;
+}
+
+.home-feature-band article,
+.guide-page-card,
+.guide-scoring {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 1.15rem;
+}
+
+.home-feature-band .ui-icon,
+.guide-page-card .ui-icon {
+  color: var(--accent);
+  font-size: 1.6rem;
+}
+
+.home-feature-band h2,
+.guide-page-card h2 {
+  margin: 0.75rem 0 0.45rem;
+  font-size: 1rem;
+}
+
+.home-feature-band p,
+.guide-page-card p,
+.guide-scoring p {
+  margin: 0;
+  color: rgba(244, 238, 222, 0.72);
+  line-height: 1.55;
+}
+
+.guide-page {
+  min-height: 100vh;
+  padding-top: 4.25rem;
+  background: #10131c;
+}
+
+.guide-page-header {
+  padding: 4rem clamp(1.25rem, 6vw, 5rem) 2rem;
+  background:
+    linear-gradient(rgba(7, 9, 15, 0.74), rgba(7, 9, 15, 0.92)),
+    url("/image/Bg_Ionia.jpg") center/cover no-repeat;
+}
+
+.guide-page-grid {
+  padding-top: 2rem;
+}
+
+.guide-scoring {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 26rem);
+  gap: 2rem;
+  margin: 0 clamp(1.25rem, 6vw, 5rem) 4rem;
+}
+
+.guide-scoring table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.guide-scoring th,
+.guide-scoring td {
+  padding: 0.7rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
+}
+
+.play-loading {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 2rem;
+  background:
+    linear-gradient(rgba(7, 9, 15, 0.72), rgba(7, 9, 15, 0.86)),
+    url("/image/Bg_Noxus.jpg") center/cover no-repeat;
+}
+
+.play-loading-panel {
+  position: relative;
+  width: min(64rem, 100%);
+  padding: 0;
+}
+
+.play-loading-panel h1 {
+  margin: 0 0 2rem;
+  text-align: center;
+  font-size: clamp(2.5rem, 8vw, 5.5rem);
+  text-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+.play-progress {
+  position: relative;
+  height: clamp(1.4rem, 3vw, 2.2rem);
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.38);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 0 40px rgba(200, 155, 60, 0.16),
+    0 18px 60px rgba(0, 0, 0, 0.34);
+}
+
+.play-progress-fill {
+  position: relative;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+  background: linear-gradient(90deg, #9f6f20, #e5bf62, #78a8c8);
+  box-shadow:
+    0 0 14px rgba(200, 155, 60, 0.36),
+    0 0 28px rgba(120, 168, 200, 0.18);
+  transition: width 120ms linear;
+}
+
+.play-progress-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(255, 255, 255, 0.45),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: rc-progress-shimmer 1.35s ease-in-out infinite;
+}
+
+.play-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1.1rem 0 1.2rem;
+  color: rgba(244, 238, 222, 0.86);
+  font-size: clamp(0.95rem, 2vw, 1.2rem);
+  font-weight: 800;
+}
+
+.play-loading-panel.failed {
+  color: #e07b6f;
+}
+
+@keyframes rc-progress-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+
+.game-frame-page {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #05070c;
+}
+
+.game-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+@media (max-width: 760px) {
+  .app-topbar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .app-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .home-feature-band,
+  .guide-page-grid,
+  .guide-scoring {
+    grid-template-columns: 1fr;
+  }
+
+  .home-hero {
+    min-height: 82vh;
+    padding-top: 8.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .play-progress-fill::after {
+    animation: none;
+  }
+
+  .play-progress-fill {
+    transition: none;
+  }
+}

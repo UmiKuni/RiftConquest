@@ -60,6 +60,21 @@ function syncFirebaseCompat() {
   }
 }
 
+function syncSocketIoClient() {
+  const src = path.join(
+    nodeModulesDir,
+    "socket.io-client",
+    "dist",
+    "socket.io.js",
+  );
+  const dest = path.join(publicVendorDir, "socket.io", "socket.io.js");
+  if (!fs.existsSync(src)) {
+    throw new Error(`Missing socket.io-client browser bundle at ${src}`);
+  }
+  copyFile(src, dest);
+}
+
 syncMdi();
 syncFirebaseCompat();
+syncSocketIoClient();
 console.log("Synced frontend vendor assets.");

@@ -9,6 +9,7 @@
     "reset:ranked": "node ../scripts/reset-ranked-data.js"
   },
   "dependencies": {
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^4.18.2",
     "firebase-admin": "^13.7.0",

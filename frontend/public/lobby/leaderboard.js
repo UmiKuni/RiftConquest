@@ -131,7 +131,11 @@
     params.set("pageSize", String(leaderboardState.pageSize));
     if (cursor) params.set("cursor", cursor);
 
-    const res = await fetch(`/api/leaderboard?${params.toString()}`);
+    const api =
+      window.rcBackend && typeof window.rcBackend.api === "function"
+        ? window.rcBackend.api("/leaderboard")
+        : "/api/leaderboard";
+    const res = await fetch(`${api}?${params.toString()}`);
     if (!res.ok) {
       let msg = "Failed to load leaderboard.";
       try {
