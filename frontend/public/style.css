@@ -265,6 +265,10 @@ body.ui-busy-active > :not(#uiBusyOverlay) {
   pointer-events: auto;
 }
 
+.lobby-home-btn {
+  backdrop-filter: blur(16px);
+}
+
 .corner-panel {
   width: min(360px, calc(100vw - 1.8rem));
   background: var(--bg-glass);

@@ -17,6 +17,7 @@
   const el = {
     // Room
     btnHost: document.getElementById("btnHost"),
+    btnLobbyHome: document.getElementById("btnLobbyHome"),
     btnShowJoin: document.getElementById("btnShowJoin"),
     btnJoin: document.getElementById("btnJoin"),
     btnCancelJoin: document.getElementById("btnCancelJoin"),
@@ -102,6 +103,16 @@
     DISPLAY_NAME_SESSION_KEY,
     getOrCreateDisplayName,
   } = rcShared.identity;
+
+  if (el.btnLobbyHome) {
+    el.btnLobbyHome.addEventListener("click", () => {
+      if (typeof window.rcNavigate === "function") {
+        window.rcNavigate("/home");
+        return;
+      }
+      window.location.href = "/home";
+    });
+  }
 
   function getCurrentDisplayName() {
     if (el.displayNameInput) {
