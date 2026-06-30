@@ -10,6 +10,7 @@ const router = createRouter({
     "/": () => import("./pages/home/redirect.js"),
     "/home": () => import("./pages/home/page.js"),
     "/how-to-play": () => import("./pages/how-to-play/page.js"),
+    "/cards": () => import("./pages/cards/page.js"),
     "/play": () => import("./pages/lobby/page.js"),
     "/profile": () => import("./pages/profile/page.js"),
     "/game": () => import("./pages/game/page.js"),

@@ -1,6 +1,7 @@
 const NAV_ITEMS = [
   { path: "/home", label: "Home" },
   { path: "/how-to-play", label: "How To Play" },
+  { path: "/cards", label: "Cards" },
 ];
 
 export function renderShell(root, { activePath, content }) {

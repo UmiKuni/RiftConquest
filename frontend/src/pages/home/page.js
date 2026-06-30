@@ -54,6 +54,7 @@ const STAT_ITEMS = [
 const FOOTER_LINKS = [
   { label: "Home", path: "/home" },
   { label: "How To Play", path: "/how-to-play" },
+  { label: "Cards", path: "/cards" },
   { label: "Play", path: "/play" },
   { label: "Profile", path: "/profile" },
 ];
@@ -127,6 +128,8 @@ function animateStatCounters(root) {
 }
 
 export function mount(root, { navigate }) {
+  document.documentElement.classList.add("home-page-active");
+  document.body.classList.add("home-page-active");
   const featuredItem = NEWS_ITEMS.find((item) => item.featured);
   const latestItems = NEWS_ITEMS.filter((item) => !item.featured);
 
@@ -238,4 +241,9 @@ export function mount(root, { navigate }) {
   });
   bindShellNavigation(root, navigate);
   animateStatCounters(root);
+}
+
+export function unmount() {
+  document.documentElement.classList.remove("home-page-active");
+  document.body.classList.remove("home-page-active");
 }

@@ -41,6 +41,8 @@ const FLOW_STEPS = [
 ];
 
 export function mount(root, { navigate }) {
+  document.documentElement.classList.add("guide-page-active");
+  document.body.classList.add("guide-page-active");
   renderShell(root, {
     activePath: "/how-to-play",
     content: `
@@ -115,4 +117,9 @@ export function mount(root, { navigate }) {
     `,
   });
   bindShellNavigation(root, navigate);
+}
+
+export function unmount() {
+  document.documentElement.classList.remove("guide-page-active");
+  document.body.classList.remove("guide-page-active");
 }
