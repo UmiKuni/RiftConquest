@@ -5,8 +5,8 @@ const NAV_ITEMS = [
   { path: "/cards", label: "Cards" },
 ];
 
-export function renderShell(root, { activePath, content }) {
-  root.innerHTML = `
+function shellHtml({ activePath, content }) {
+  return `
     <div class="app-shell">
       <header class="app-topbar">
         <button class="app-brand cinzel" type="button" data-nav="/home">
@@ -37,11 +37,33 @@ export function renderShell(root, { activePath, content }) {
   `;
 }
 
+function updateShellActivePath(root, activePath) {
+  root.querySelectorAll(".app-nav-link").forEach((button) => {
+    button.classList.toggle(
+      "active",
+      button.getAttribute("data-nav") === activePath,
+    );
+  });
+}
+
+export function renderShell(root, { activePath, content }) {
+  const shell = root.querySelector(":scope > .app-shell");
+  const main = shell ? shell.querySelector(".app-main") : null;
+
+  if (shell && main) {
+    updateShellActivePath(root, activePath);
+    main.innerHTML = content;
+    return;
+  }
+
+  root.innerHTML = shellHtml({ activePath, content });
+}
+
 export function bindShellNavigation(root, navigate) {
   root.querySelectorAll("[data-nav]").forEach((el) => {
-    el.addEventListener("click", () => {
+    el.onclick = () => {
       const path = el.getAttribute("data-nav");
       if (path) navigate(path);
-    });
+    };
   });
 }

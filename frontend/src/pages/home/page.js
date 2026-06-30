@@ -1,5 +1,5 @@
 import { bindShellNavigation, renderShell } from "../../app/shell.js";
-import { fetchNewsPosts } from "../../shared/api.js";
+import { fetchNewsPosts, getCachedNewsPosts } from "../../shared/api.js";
 
 const STAT_ITEMS = [
   {
@@ -334,6 +334,12 @@ export function mount(root, { navigate }) {
   bindShellNavigation(root, navigate);
   bindCoffeeModal(root);
   animateStatCounters(root);
+
+  const cachedNews = getCachedNewsPosts({ limit: 4 });
+  if (cachedNews) {
+    renderHomeNews(root, cachedNews, navigate);
+    return;
+  }
 
   fetchNewsPosts({ limit: 4 })
     .then((posts) => {

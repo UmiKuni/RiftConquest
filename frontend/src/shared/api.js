@@ -21,6 +21,13 @@ async function readJsonResponse(res, fallbackMessage) {
   return body;
 }
 
+const newsCache = new Map();
+const newsRequests = new Map();
+
+function newsCacheKey({ limit } = {}) {
+  return limit ? `limit:${Number(limit)}` : "all";
+}
+
 export async function fetchMe(user) {
   const res = await fetch(apiUrl("/me"), {
     headers: await authHeaders(user),
@@ -63,14 +70,44 @@ export async function checkBackendHealth() {
   return body && body.ok === true;
 }
 
-export async function fetchNewsPosts({ limit } = {}) {
+export function getCachedNewsPosts(options = {}) {
+  const cached = newsCache.get(newsCacheKey(options));
+  if (cached) return cached;
+
+  if (options.limit && newsCache.has("all")) {
+    return newsCache.get("all").slice(0, Number(options.limit));
+  }
+
+  return null;
+}
+
+export async function fetchNewsPosts({ limit, force = false } = {}) {
+  const key = newsCacheKey({ limit });
+  if (!force && newsCache.has(key)) return newsCache.get(key);
+  if (!force && limit && newsCache.has("all")) {
+    const posts = newsCache.get("all").slice(0, Number(limit));
+    newsCache.set(key, posts);
+    return posts;
+  }
+  if (!force && newsRequests.has(key)) return newsRequests.get(key);
+
   const params = new URLSearchParams();
   if (limit) params.set("limit", String(limit));
 
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  const res = await fetch(`${apiUrl("/news")}${suffix}`, {
+  const request = fetch(`${apiUrl("/news")}${suffix}`, {
     headers: { Accept: "application/json" },
-  });
-  const body = await readJsonResponse(res, "Failed to load news.");
-  return body && Array.isArray(body.posts) ? body.posts : [];
+  })
+    .then((res) => readJsonResponse(res, "Failed to load news."))
+    .then((body) => {
+      const posts = body && Array.isArray(body.posts) ? body.posts : [];
+      newsCache.set(key, posts);
+      return posts;
+    })
+    .finally(() => {
+      newsRequests.delete(key);
+    });
+
+  newsRequests.set(key, request);
+  return request;
 }

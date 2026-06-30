@@ -9,18 +9,21 @@ function parseRoute() {
 
 export function createRouter({ root, routes, fallback = "/" }) {
   let currentPage = null;
+  let renderToken = 0;
 
   async function render() {
+    const token = ++renderToken;
     const route = parseRoute();
     const loader = routes[route.path] || routes[fallback];
     if (!loader) return;
+
+    const page = await loader();
+    if (token !== renderToken) return;
 
     if (currentPage && typeof currentPage.unmount === "function") {
       currentPage.unmount();
     }
 
-    root.textContent = "";
-    const page = await loader();
     currentPage = page;
     page.mount(root, {
       route,
