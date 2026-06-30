@@ -291,7 +291,7 @@ export function mount(root, { navigate }) {
             experiment in clean realtime gameplay.
           </p>
           <p class="home-footer-contact">Contact: <a href="mailto:riftconquest@gmail.com">riftconquest@gmail.com</a></p>
-          <p class="home-footer-contact">Developer: RiftConquest Team</p>
+          <p class="home-footer-contact">Developer: UmiKuni</p>
         </div>
         <nav aria-label="Footer navigation">
           <h3>Links</h3>
